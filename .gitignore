@@ -1,0 +1,10 @@
+# ⚠️ 개인정보 포함 — 절대 GitHub에 올리지 않음
+admin.html
+names.local.js
+*.local.js
+apps-script.gs
+
+# 원본 자료(엑셀/PDF 등)도 혹시 폴더에 들어오면 차단
+*.xlsx
+*.xls
+*.pdf

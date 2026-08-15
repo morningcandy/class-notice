@@ -546,37 +546,72 @@ function fmtDate(d){
 function todayStr(){ return fmtDate(new Date()); }
 
 /* ===================== 개인 코드 확인 ===================== */
-const MYID_KEY = 'classNoticeApp_myStudentId';
+const MYCODE_KEY = 'classNoticeApp_myCode';
+/* 구글시트 문지기(Apps Script) 웹앱 엔드포인트. 개인정보(이름·코드·명단)는 여기서 안 나옴. */
+const SHEET_API = "https://script.google.com/macros/s/AKfycbzwSPAStH224LG76_BoBSLtsFYDb4rBHUa81dGSQ-MQSq07doqxab55GV8UGVmPKOMy4g/exec";
 
-function restoreIdentity(){
-  const saved = localStorage.getItem(MYID_KEY);
-  if(saved){
-    const s = students.find(st => String(st.id) === saved);
-    if(s) currentStudent = s;
-  }
+/* 공지/할일은 서버에서 받아온다(정적 data.js가 아님). */
+let notices = [];
+let tasks = [];
+
+/* 코드 정규화: 숫자만 남기고 왼쪽을 0으로 채워 6자리로.
+   (1번 학생이 "19596"만 쳐도 "019596"으로 인식됨) */
+function normalizeCode(raw){
+  let d = String(raw||'').replace(/\D/g,'');
+  if(d.length < 6) d = d.padStart(6,'0');
+  return d;
 }
 
-function submitCode(){
+/* 서버(구글시트 문지기)에서 공지/할일을 가져온다.
+   code가 있으면 전체+본인 것, 없거나 틀리면 전체만. 대상 필터는 서버가 처리. */
+async function loadData(code){
+  const url = SHEET_API + (code ? ('?code=' + encodeURIComponent(code)) : '');
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('서버 응답 오류 (' + r.status + ')');
+  const d = await r.json();
+  if(!d || !d.ok) throw new Error('데이터 형식 오류');
+  notices = Array.isArray(d.notices) ? d.notices : [];
+  tasks   = Array.isArray(d.tasks)   ? d.tasks   : [];
+  currentStudent = d.student ? { id: d.student.num, name: d.student.name } : null;
+  return d;
+}
+
+/* 불러오기 실패를 조용히 넘기지 않고 화면에 알린다(가짜 데이터로 대체하지 않음). */
+function showConnError(){
+  const nl = document.getElementById('noticeList');
+  if(nl) nl.innerHTML = '<div class="empty-state">⚠️ 안내를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침 해주세요.</div>';
+  const tl = document.getElementById('taskList');
+  if(tl) tl.innerHTML = '<div class="empty-state">⚠️ 할 일을 불러오지 못했어요. 새로고침 해주세요.</div>';
+}
+
+async function submitCode(){
   const input = document.getElementById('codeInput');
   const msg = document.getElementById('identityMsg');
-  const val = input ? input.value.trim() : '';
-  if(!val){ if(msg) msg.textContent = '코드를 입력해주세요.'; return; }
-  const found = students.find(s => s.code === val);
-  if(found){
-    currentStudent = found;
-    localStorage.setItem(MYID_KEY, String(found.id));
-    renderIdentityBox();
-    renderAll();
-  } else {
-    if(msg) msg.textContent = '코드가 올바르지 않아요. 다시 확인해주세요.';
+  const raw = input ? input.value.trim() : '';
+  if(!raw){ if(msg) msg.textContent = '코드를 입력해주세요.'; return; }
+  const code = normalizeCode(raw);
+  if(msg) msg.textContent = '확인 중…';
+  try{
+    await loadData(code);
+  }catch(e){
+    if(msg) msg.textContent = '연결에 실패했어요. 잠시 후 다시 시도해주세요.';
+    return;
   }
-}
-
-function logoutIdentity(){
-  currentStudent = null;
-  localStorage.removeItem(MYID_KEY);
+  if(!currentStudent){
+    if(msg) msg.textContent = '코드가 올바르지 않아요. 다시 확인해주세요.';
+    renderAll();  // 전체 안내는 그대로 보여줌
+    return;
+  }
+  localStorage.setItem(MYCODE_KEY, code);
   renderIdentityBox();
   renderAll();
+}
+
+async function logoutIdentity(){
+  currentStudent = null;
+  localStorage.removeItem(MYCODE_KEY);
+  try{ await loadData(''); renderIdentityBox(); renderAll(); }
+  catch(e){ renderIdentityBox(); showConnError(); }
 }
 
 function renderIdentityBox(){
@@ -591,10 +626,11 @@ function renderIdentityBox(){
   } else {
     box.innerHTML = `
       <div class="identity-row">
-        <input type="text" id="codeInput" placeholder="개인 코드 입력" maxlength="6" inputmode="numeric"
+        <input type="text" id="codeInput" placeholder="번호+휴대폰 뒤 4자리 (예: 019596)" maxlength="6" inputmode="numeric"
           onkeydown="if(event.key==='Enter') submitCode()">
         <button onclick="submitCode()">확인</button>
       </div>
+      <div class="identity-hint" style="font-size:12px;opacity:.7;margin-top:4px">내 반 번호(2자리) + 내 휴대폰 뒤 4자리 = 6자리 코드예요. 예) 1번이고 폰 뒤가 9596이면 <b>019596</b></div>
       <div class="identity-msg" id="identityMsg"></div>
     `;
   }
@@ -650,7 +686,7 @@ function toggleNoticeRead(studentId, noticeId){
     archiveEl.innerHTML = pastNotices().map(n => noticeCardHtml(n, {archived:true})).join('');
   }
 
-  const student = students.find(s => s.id === studentId);
+  const student = currentStudent;
   const notice = notices.find(n => n.id === noticeId);
   if(student && notice){
     submitToGoogleForm(student.name, '[안내] ' + notice.title, newState ? '확인' : '확인취소');
@@ -780,7 +816,7 @@ function toggleTaskDone(studentId, taskId){
   saveDoneMap(map);
   renderTasks();
 
-  const student = students.find(s => s.id === studentId);
+  const student = currentStudent;
   const task = tasks.find(t => t.id === taskId);
   if(student && task){
     submitToGoogleForm(student.name, task.title, newState ? '완료' : '취소');
@@ -1047,15 +1083,23 @@ function renderCalendar(){
 })();
 
 /* ===================== 시작 ===================== */
-function init(){
+async function init(){
   const now = new Date();
   document.getElementById('headerDate').textContent =
     `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준 안내`;
-  restoreIdentity();
-  renderIdentityBox();
-  renderNotices();
-  renderCalendar();
-  renderTasks();
+  renderCalendar();      // 달력은 정적 data.js라 항상 표시
+  renderIdentityBox();   // 로그인 입력창을 즉시 표시(네트워크 대기 전)
+  const savedCode = localStorage.getItem(MYCODE_KEY) || '';
+  try{
+    await loadData(savedCode);
+    renderIdentityBox();
+    renderNotices();
+    renderTasks();
+  }catch(e){
+    currentStudent = null;
+    renderIdentityBox();
+    showConnError();
+  }
 }
 init();
 </script>
