@@ -7,17 +7,8 @@
      (index.html의 SHEET_API 참고). 개인정보는 서버에서만 처리되고 이 파일엔 없습니다.
    - 이 파일에는 학사일정 달력 데이터만 둡니다:
        calendarEvents: 학사일정 / holidays: 공휴일 / specialRanges: 고사기간 / vacationRanges: 방학
-   - GOOGLE_FORM_CONFIG: 학생이 할일 체크 시 기록되는 구글폼(번호로만 기록).
+   - 학생의 확인/완료 응답은 Apps Script를 통해 앱_학생응답 시트에 기록됩니다.
    ========================================================================= */
-
-/* 학생이 체크할 때 자동으로 기록되는 구글폼 연결 정보 (선생님이 구글시트에서 제출/확인 현황을 볼 수 있음)
-   * 공개 배포라 학생 이름 대신 "번호 + 자음 이니셜"이 기록됩니다. 누가 몇 번인지는 선생님만 아세요. */
-const GOOGLE_FORM_CONFIG = {
-  action: 'https://docs.google.com/forms/u/0/d/e/1FAIpQLSc3zgADiehAaHCzHY-LpfZQEY-KGEu0x2rkkpXdFU0kJhcWvA/formResponse',
-  entryStudent: 'entry.1015689208',
-  entryTask: 'entry.1750846628',
-  entryStatus: 'entry.1315951409',
-};
 
 /* 2학기 학사일정 */
 const calendarEvents = [

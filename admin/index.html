@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#4338ca">
+  <title>학급 알림장 관리자</title>
+  <link rel="icon" href="../snack_icon_full.png">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <main id="loginView" class="login-shell">
+    <section class="login-card">
+      <div class="brand-mark">알림장</div>
+      <p class="eyebrow">2학년 3반</p>
+      <h1>학급 알림장 관리자</h1>
+      <p class="muted">공지 내용을 확인하고 수정한 뒤 학생 화면에 게시합니다.</p>
+      <form id="loginForm" class="login-form">
+        <label for="passwordInput">관리자 비밀번호</label>
+        <input id="passwordInput" type="password" autocomplete="current-password" required autofocus>
+        <button class="primary full" type="submit">관리자 화면 열기</button>
+      </form>
+      <p id="loginError" class="form-error" role="alert"></p>
+      <a class="text-link" href="../">학생용 알림장으로 돌아가기</a>
+    </section>
+  </main>
+
+  <div id="adminView" class="app hidden">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">2학년 3반</p>
+        <h1>학급 알림장 관리자</h1>
+      </div>
+      <nav class="top-actions" aria-label="바로가기">
+        <a href="../" target="_blank" rel="noopener">학생 화면</a>
+        <a id="plannerLink" href="#" target="_blank" rel="noopener">개인 알림장</a>
+        <button id="logoutBtn" class="ghost" type="button">로그아웃</button>
+      </nav>
+    </header>
+
+    <section class="dashboard" aria-label="공지 현황">
+      <article><span>검토 대기</span><strong id="reviewCount">0</strong></article>
+      <article><span>게시 중</span><strong id="publishedCount">0</strong></article>
+      <article><span>보류</span><strong id="holdCount">0</strong></article>
+      <article><span>종료</span><strong id="endedCount">0</strong></article>
+    </section>
+
+    <section class="workspace">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">게시 관리</p>
+          <h2>공지사항</h2>
+          <p id="syncText" class="muted">데이터를 불러오는 중입니다.</p>
+        </div>
+        <button id="newNoticeBtn" class="primary" type="button">+ 공지 직접 추가</button>
+      </div>
+
+      <div class="filters" role="tablist" aria-label="공지 상태 필터">
+        <button class="filter active" data-status="all" type="button">전체</button>
+        <button class="filter" data-status="검토대기" type="button">검토 대기</button>
+        <button class="filter" data-status="게시됨" type="button">게시 중</button>
+        <button class="filter" data-status="보류" type="button">보류</button>
+        <button class="filter" data-status="종료됨" type="button">종료</button>
+      </div>
+
+      <div id="noticeList" class="notice-list"></div>
+      <div id="emptyState" class="empty hidden">
+        <div>📭</div>
+        <strong>표시할 공지가 없습니다.</strong>
+        <p>개인 알림장에서 내용을 보내거나 직접 공지를 추가해보세요.</p>
+      </div>
+    </section>
+  </div>
+
+  <dialog id="noticeDialog">
+    <form id="noticeForm" method="dialog">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">공지 편집</p>
+          <h2 id="dialogTitle">공지 직접 추가</h2>
+        </div>
+        <button id="closeDialogBtn" class="icon-btn" type="button" aria-label="닫기">×</button>
+      </div>
+      <input id="noticeId" type="hidden">
+
+      <div class="field-grid two">
+        <label>공개 범위
+          <select id="scopeInput">
+            <option value="학급전체">학급 전체</option>
+            <option value="학생개별">학생 개별</option>
+          </select>
+        </label>
+        <label>형식
+          <select id="typeInput">
+            <option value="공지">공지</option>
+            <option value="할일">할 일</option>
+          </select>
+        </label>
+      </div>
+
+      <fieldset id="studentField" class="student-field hidden">
+        <legend>대상 학생</legend>
+        <div id="studentChoices" class="student-choices"></div>
+        <p class="help">여러 학생을 선택할 수 있습니다. 게시할 때 최소 한 명이 필요합니다.</p>
+      </fieldset>
+
+      <label>제목
+        <input id="titleInput" maxlength="120" required placeholder="학생 화면에 표시할 제목">
+      </label>
+      <label>내용
+        <textarea id="contentInput" rows="6" placeholder="안내 내용을 입력하세요."></textarea>
+      </label>
+
+      <div class="field-grid two">
+        <label>안내일
+          <input id="noticeDateInput" type="date" required>
+        </label>
+        <label>마감일
+          <input id="dueDateInput" type="date">
+        </label>
+      </div>
+      <label class="check-line">
+        <input id="urgentInput" type="checkbox">
+        <span>긴급 표시</span>
+      </label>
+
+      <p id="formError" class="form-error" role="alert"></p>
+      <div class="dialog-actions">
+        <button id="cancelDialogBtn" class="ghost" type="button">취소</button>
+        <button id="saveNoticeBtn" class="primary" type="submit">검토 대기로 저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="../config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

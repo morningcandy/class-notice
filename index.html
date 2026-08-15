@@ -586,6 +586,7 @@
 </div>
 
 <script src="data.js"></script>
+<script src="config.js"></script>
 <script>
 let currentStudent = null;
 let calDate = new Date();
@@ -593,6 +594,19 @@ let calDate = new Date();
 function fmtDate(d){
   const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
+}
+function escapeHtml(value){
+  return String(value ?? '')
+    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+    .replaceAll('"','&quot;').replaceAll("'",'&#039;');
+}
+function safeUrl(value){
+  try{
+    const raw = String(value || '').trim();
+    if(!raw) return '';
+    const url = new URL(raw, location.href);
+    return /^https?:$/.test(url.protocol) ? url.href : '';
+  }catch(e){ return ''; }
 }
 function todayStr(){ return fmtDate(new Date()); }
 function shiftDateStr(dateStr, delta){
@@ -612,7 +626,7 @@ let noticeViewDate = todayStr();
 /* ===================== 개인 코드 확인 ===================== */
 const MYCODE_KEY = 'classNoticeApp_myCode';
 /* 구글시트 문지기(Apps Script) 웹앱 엔드포인트. 개인정보(이름·코드·명단)는 여기서 안 나옴. */
-const SHEET_API = "https://script.google.com/macros/s/AKfycbzwSPAStH224LG76_BoBSLtsFYDb4rBHUa81dGSQ-MQSq07doqxab55GV8UGVmPKOMy4g/exec";
+const SHEET_API = window.CLASS_NOTICE_CONFIG.apiUrl;
 
 /* 공지/할일은 서버에서 받아온다(정적 data.js가 아님). */
 let notices = [];
@@ -683,7 +697,7 @@ function renderIdentityBox(){
   if(currentStudent){
     box.innerHTML = `
       <div class="identity-chip">
-        <span>🔓 <b>${currentStudent.name}</b> 학생 개인 안내 확인 중</span>
+        <span>🔓 <b>${escapeHtml(currentStudent.name)}</b> 학생 개인 안내 확인 중</span>
         <button onclick="logoutIdentity()">전환</button>
       </div>
     `;
@@ -710,11 +724,8 @@ function renderAll(){
 }
 
 /* ===================== 공지사항 ===================== */
-/* 담임 플래너에서 보낸 일정(아래 IIFE에서 채움) → 서버 공지와 함께 '오늘의 안내'에 표시 */
-let importedNotices = [];
-
 function noticesForStudent(){
-  return notices.concat(importedNotices)
+  return notices
     .filter(n => n.audience==='all' || (currentStudent && n.audience===currentStudent.id))
     .sort((a,b)=> (b.urgent - a.urgent) || (b.date.localeCompare(a.date)));
 }
@@ -752,14 +763,15 @@ function toggleNoticeRead(studentId, noticeId){
   const student = currentStudent;
   const notice = notices.find(n => n.id === noticeId);
   if(student && notice){
-    submitToGoogleForm(student.name, '[안내] ' + notice.title, newState ? '확인' : '확인취소');
+    submitResponse('공지', notice.id, newState ? '확인' : '확인취소');
   }
 }
 
 function fileButtonHtml(n){
-  if(!n.fileUrl) return '';
+  const url = safeUrl(n.fileUrl);
+  if(!url) return '';
   const label = n.fileName || '첨부파일';
-  return `<a class="file-btn" href="${n.fileUrl}" target="_blank" rel="noopener">📎 ${label} 보기</a>`;
+  return `<a class="file-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener">📎 ${escapeHtml(label)} 보기</a>`;
 }
 
 function noticeCardHtml(n, opts){
@@ -768,7 +780,7 @@ function noticeCardHtml(n, opts){
   const read = identified && isNoticeRead(currentStudent.id, n.id);
   const unread = identified && !read;
   const checkboxHtml = identified
-    ? `<input type="checkbox" class="notice-checkbox" ${read?'checked':''} onchange="toggleNoticeRead(${currentStudent.id}, ${n.id})">`
+    ? `<input type="checkbox" class="notice-checkbox" ${read?'checked':''} onchange='toggleNoticeRead(${JSON.stringify(currentStudent.id)}, ${JSON.stringify(n.id)})'>`
     : `<span class="checkbox-placeholder" title="개인 코드 입력 후 확인 체크 가능">✓</span>`;
   return `
     <div class="notice-card ${n.urgent?'urgent':''} ${opts.archived?'archived':''} ${read?'done':''}">
@@ -776,14 +788,14 @@ function noticeCardHtml(n, opts){
       <div class="notice-body">
         <div class="ntitle">
           ${unread?'<span class="unread-dot"></span>':''}
-          ${n.title}
+          ${escapeHtml(n.title)}
           <span class="tag ${n.audience==='all'?'all':'personal'}">${n.audience==='all'?'전체':'개인'}</span>
           ${n.urgent?'<span class="tag urgent">중요</span>':''}
           ${unread?'<span class="tag new">안읽음</span>':''}
         </div>
-        ${n.content ? `<div class="ncontent">${n.content}</div>` : ''}
+        ${n.content ? `<div class="ncontent">${escapeHtml(n.content)}</div>` : ''}
         ${fileButtonHtml(n)}
-        <div class="ndate">${n.date}</div>
+        <div class="ndate">${escapeHtml(n.date)}</div>
       </div>
     </div>
   `;
@@ -917,18 +929,19 @@ function toggleTaskDone(studentId, taskId){
   const student = currentStudent;
   const task = tasks.find(t => t.id === taskId);
   if(student && task){
-    submitToGoogleForm(student.name, task.title, newState ? '완료' : '취소');
+    submitResponse('할일', task.id, newState ? '완료' : '취소');
   }
 }
 
-/* 체크할 때마다 구글폼으로 자동 전송 -> 선생님은 연결된 구글시트에서 확인 가능 */
-function submitToGoogleForm(studentName, taskTitle, statusText){
-  if(typeof GOOGLE_FORM_CONFIG === 'undefined' || !GOOGLE_FORM_CONFIG.action) return;
-  const body = new URLSearchParams();
-  body.append(GOOGLE_FORM_CONFIG.entryStudent, studentName);
-  body.append(GOOGLE_FORM_CONFIG.entryTask, taskTitle);
-  body.append(GOOGLE_FORM_CONFIG.entryStatus, statusText);
-  fetch(GOOGLE_FORM_CONFIG.action, { method:'POST', mode:'no-cors', body }).catch(()=>{});
+/* 확인/완료 응답은 같은 Apps Script의 앱_학생응답 시트에 기록한다. */
+function submitResponse(itemType, itemId, response){
+  const code = localStorage.getItem(MYCODE_KEY) || '';
+  if(!code) return;
+  fetch(SHEET_API, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({action:'recordResponse', code, itemType, itemId, response})
+  }).catch(()=>{});
 }
 
 function renderTasks(){
@@ -951,14 +964,14 @@ function renderTasks(){
     const pillClass = done ? 'done' : (overdueNotDone ? 'overdue' : st.cls);
     const pillLabel = done ? '완료' : (overdueNotDone ? '🚨 마감(미제출)' : st.label);
     const checkboxHtml = identified
-      ? `<input type="checkbox" class="task-checkbox" ${done?'checked':''} onchange="toggleTaskDone(${currentStudent.id}, ${t.id})">`
+      ? `<input type="checkbox" class="task-checkbox" ${done?'checked':''} onchange='toggleTaskDone(${JSON.stringify(currentStudent.id)}, ${JSON.stringify(t.id)})'>`
       : `<span class="checkbox-placeholder" title="개인 코드 입력 후 체크 가능">✓</span>`;
     return `
       <div class="task-item ${done?'done':''} ${overdueNotDone?'overdue':''}">
         ${checkboxHtml}
         <div class="task-info">
-          <div class="task-title">${overdueNotDone?'🚨 ':''}${t.title}</div>
-          <div class="task-due">제출기한 ${t.dueDate}</div>
+          <div class="task-title">${overdueNotDone?'🚨 ':''}${escapeHtml(t.title)}</div>
+          <div class="task-due">제출기한 ${escapeHtml(t.dueDate)}</div>
         </div>
         <div class="status-pill ${pillClass}">${pillLabel}</div>
       </div>
@@ -1054,7 +1067,7 @@ function showDayDetail(dateStr){
   const d = new Date(dateStr);
   title.textContent = `${d.getMonth()+1}월 ${d.getDate()}일 일정`;
   list.innerHTML = items.length
-    ? items.map(i=>`<li>${i}</li>`).join('')
+    ? items.map(i=>`<li>${escapeHtml(i)}</li>`).join('')
     : '<li>등록된 일정이 없어요</li>';
   detail.style.display = 'block';
 }
@@ -1153,37 +1166,6 @@ function renderCalendar(){
   }
   document.getElementById('calGrid').innerHTML = html;
 }
-
-/* ===== 담임 플래너에서 보낸 일정 가져오기 (추가 기능, 기존 data.js는 그대로) =====
-   플래너의 [체크한 일정 보내기] 버튼이 넘겨준 일정을 '오늘의 안내'에 [담임] 안내로 추가합니다.
-   URL(#import=...)로 받으면 이 기기에 저장해 두고, 다음에 그냥 열어도 계속 보여요. */
-(function importHomeroomSchedule(){
-  const KEY = 'classNoticeApp_importedHomeroom';
-  try{
-    let incoming = null;
-    const m = location.hash.match(/import=([^&]+)/);
-    if(m){
-      incoming = JSON.parse(decodeURIComponent(m[1]));
-      localStorage.setItem(KEY, JSON.stringify(incoming));
-      history.replaceState(null, '', location.pathname + location.search);
-    } else {
-      const saved = localStorage.getItem(KEY);
-      if(saved) incoming = JSON.parse(saved);
-    }
-    if(Array.isArray(incoming)){
-      importedNotices = incoming
-        .filter(ev => ev && ev.date && ev.title)
-        .map((ev, i) => ({
-          id: 900000 + i,
-          title: '[담임] ' + ev.title,
-          content: ev.note ? ev.note : '',
-          date: ev.date,
-          audience: 'all',
-          urgent: false
-        }));
-    }
-  }catch(e){ /* 잘못된 데이터는 무시 */ }
-})();
 
 /* ===================== 시작 ===================== */
 async function init(){
