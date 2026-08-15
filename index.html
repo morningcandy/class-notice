@@ -220,6 +220,49 @@
   }
   .tag.new{background:#ffe3e5;color:var(--danger);}
 
+  /* 오늘의 안내: 날짜 이동 */
+  .notice-datenav{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom:12px;
+  }
+  .notice-datenav button.nd-arrow{
+    border:none;
+    background:var(--gray-bg);
+    width:28px;height:28px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:14px;
+    flex-shrink:0;
+  }
+  .notice-datenav .nd-label{
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    padding:4px 8px;
+    border-radius:8px;
+    flex:1;
+    text-align:center;
+    white-space:nowrap;
+  }
+  .notice-datenav .nd-label:hover{background:var(--gray-bg);}
+  .notice-datenav .nd-label .nd-badge{
+    font-size:11px;
+    font-weight:700;
+    color:var(--primary);
+    margin-left:5px;
+  }
+  .notice-datenav .nd-input{
+    font-size:13px;
+    font-weight:700;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:3px 6px;
+    color:var(--text);
+    flex:1;
+  }
+
   .file-btn{
     display:inline-flex;
     align-items:center;
@@ -487,6 +530,14 @@
 
   <section>
     <div class="section-title">📢 오늘의 안내 <span class="badge" id="noticeCount">0</span></div>
+    <div class="notice-datenav">
+      <button class="nd-arrow" onclick="changeNoticeDate(-1)" aria-label="이전 날">‹</button>
+      <span class="nd-label" id="noticeDateLabel" onclick="openNoticeDatePicker()">-</span>
+      <input type="date" id="noticeDateInput" class="nd-input" style="display:none"
+        onchange="jumpNoticeDate(this.value)" onblur="hideNoticeDatePicker()">
+      <button class="nd-arrow" onclick="changeNoticeDate(1)" aria-label="다음 날">›</button>
+      <button class="today-btn" onclick="noticeGoToday()">오늘</button>
+    </div>
     <div id="noticeList"></div>
     <button class="archive-toggle" id="archiveToggle" onclick="toggleArchive()">지난 공지 보기</button>
     <div id="archiveList"></div>
@@ -544,6 +595,19 @@ function fmtDate(d){
   return `${y}-${m}-${day}`;
 }
 function todayStr(){ return fmtDate(new Date()); }
+function shiftDateStr(dateStr, delta){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  return fmtDate(d);
+}
+function labelDate(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  const wd = ['일','월','화','수','목','금','토'][d.getDay()];
+  return `${d.getMonth()+1}월 ${d.getDate()}일 (${wd})`;
+}
+
+/* '오늘의 안내'에서 보고 있는 날짜 (기본 = 오늘) */
+let noticeViewDate = todayStr();
 
 /* ===================== 개인 코드 확인 ===================== */
 const MYCODE_KEY = 'classNoticeApp_myCode';
@@ -646,16 +710,15 @@ function renderAll(){
 }
 
 /* ===================== 공지사항 ===================== */
+/* 담임 플래너에서 보낸 일정(아래 IIFE에서 채움) → 서버 공지와 함께 '오늘의 안내'에 표시 */
+let importedNotices = [];
+
 function noticesForStudent(){
-  return notices
+  return notices.concat(importedNotices)
     .filter(n => n.audience==='all' || (currentStudent && n.audience===currentStudent.id))
     .sort((a,b)=> (b.urgent - a.urgent) || (b.date.localeCompare(a.date)));
 }
 
-function currentNotices(){
-  const today = todayStr();
-  return noticesForStudent().filter(n => n.date >= today);
-}
 function pastNotices(){
   const today = todayStr();
   return noticesForStudent().filter(n => n.date < today);
@@ -718,7 +781,7 @@ function noticeCardHtml(n, opts){
           ${n.urgent?'<span class="tag urgent">중요</span>':''}
           ${unread?'<span class="tag new">안읽음</span>':''}
         </div>
-        <div class="ncontent">${n.content}</div>
+        ${n.content ? `<div class="ncontent">${n.content}</div>` : ''}
         ${fileButtonHtml(n)}
         <div class="ndate">${n.date}</div>
       </div>
@@ -726,36 +789,71 @@ function noticeCardHtml(n, opts){
   `;
 }
 
+/* 날짜 이동 컨트롤 */
+function renderNoticeDateLabel(){
+  const label = document.getElementById('noticeDateLabel');
+  if(!label) return;
+  const viewingToday = noticeViewDate === todayStr();
+  label.innerHTML = labelDate(noticeViewDate) + (viewingToday ? '<span class="nd-badge">· 오늘</span>' : '');
+}
+function changeNoticeDate(delta){
+  noticeViewDate = shiftDateStr(noticeViewDate, delta);
+  renderNotices();
+}
+function noticeGoToday(){
+  noticeViewDate = todayStr();
+  renderNotices();
+}
+function openNoticeDatePicker(){
+  const input = document.getElementById('noticeDateInput');
+  const label = document.getElementById('noticeDateLabel');
+  input.value = noticeViewDate;
+  label.style.display = 'none';
+  input.style.display = 'inline-block';
+  input.focus();
+  if(input.showPicker){ try{ input.showPicker(); }catch(e){} }
+}
+function hideNoticeDatePicker(){
+  document.getElementById('noticeDateInput').style.display = 'none';
+  document.getElementById('noticeDateLabel').style.display = 'block';
+}
+function jumpNoticeDate(value){
+  if(!value){ hideNoticeDatePicker(); return; }
+  noticeViewDate = value;
+  hideNoticeDatePicker();
+  renderNotices();
+}
+
 function renderNotices(){
-  const list = currentNotices();
+  renderNoticeDateLabel();
+  const today = todayStr();
+  const viewingToday = noticeViewDate === today;
+  const forStudent = noticesForStudent();
   const identified = !!currentStudent;
-  const unreadCount = identified ? list.filter(n => !isNoticeRead(currentStudent.id, n.id)).length : 0;
+
+  const dayList = forStudent.filter(n => n.date === noticeViewDate);
+  const upcomingList = viewingToday
+    ? forStudent.filter(n => n.date > today)
+        .sort((a,b) => (b.urgent - a.urgent) || a.date.localeCompare(b.date))
+    : [];
+
+  const unreadCount = identified ? dayList.filter(n => !isNoticeRead(currentStudent.id, n.id)).length : 0;
   const badge = document.getElementById('noticeCount');
-  badge.textContent = unreadCount>0 ? `안읽음 ${unreadCount}` : `${list.length}`;
+  badge.textContent = unreadCount>0 ? `안읽음 ${unreadCount}` : `${dayList.length}`;
   badge.className = 'badge' + (unreadCount>0 ? ' unread' : '');
 
   const el = document.getElementById('noticeList');
-  if(list.length===0){
-    el.innerHTML = `<div class="empty-state">등록된 안내가 없어요</div>`;
+  let html = '';
+  if(dayList.length){
+    html += dayList.map(n => noticeCardHtml(n)).join('');
   } else {
-    const today = todayStr();
-    const todayList = list.filter(n => n.date === today);
-    const upcomingList = list
-      .filter(n => n.date > today)
-      .sort((a,b) => (b.urgent - a.urgent) || a.date.localeCompare(b.date));
-
-    let html = '';
-    if(todayList.length){
-      html += todayList.map(n => noticeCardHtml(n)).join('');
-    } else {
-      html += `<div class="empty-state">오늘은 새 안내가 없어요</div>`;
-    }
-    if(upcomingList.length){
-      html += `<div class="notice-subheader">📆 아직 유효한 안내 (마감 전)</div>`;
-      html += upcomingList.map(n => noticeCardHtml(n)).join('');
-    }
-    el.innerHTML = html;
+    html += `<div class="empty-state">${viewingToday ? '오늘은 새 안내가 없어요' : '이 날은 안내가 없어요'}</div>`;
   }
+  if(upcomingList.length){
+    html += `<div class="notice-subheader">📆 아직 유효한 안내 (마감 전)</div>`;
+    html += upcomingList.map(n => noticeCardHtml(n)).join('');
+  }
+  el.innerHTML = html;
 
   const past = pastNotices();
   const toggleBtn = document.getElementById('archiveToggle');
@@ -1057,7 +1155,7 @@ function renderCalendar(){
 }
 
 /* ===== 담임 플래너에서 보낸 일정 가져오기 (추가 기능, 기존 data.js는 그대로) =====
-   플래너의 [담임 일정 보내기] 버튼이 넘겨준 일정을 달력에 [담임] 일정으로 추가합니다.
+   플래너의 [체크한 일정 보내기] 버튼이 넘겨준 일정을 '오늘의 안내'에 [담임] 안내로 추가합니다.
    URL(#import=...)로 받으면 이 기기에 저장해 두고, 다음에 그냥 열어도 계속 보여요. */
 (function importHomeroomSchedule(){
   const KEY = 'classNoticeApp_importedHomeroom';
@@ -1072,12 +1170,17 @@ function renderCalendar(){
       const saved = localStorage.getItem(KEY);
       if(saved) incoming = JSON.parse(saved);
     }
-    if(Array.isArray(incoming) && typeof calendarEvents !== 'undefined'){
-      incoming.forEach(ev=>{
-        if(ev && ev.date && ev.title){
-          calendarEvents.push({ date: ev.date, title: '[담임] ' + ev.title });
-        }
-      });
+    if(Array.isArray(incoming)){
+      importedNotices = incoming
+        .filter(ev => ev && ev.date && ev.title)
+        .map((ev, i) => ({
+          id: 900000 + i,
+          title: '[담임] ' + ev.title,
+          content: ev.note ? ev.note : '',
+          date: ev.date,
+          audience: 'all',
+          urgent: false
+        }));
     }
   }catch(e){ /* 잘못된 데이터는 무시 */ }
 })();
