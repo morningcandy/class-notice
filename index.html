@@ -580,7 +580,7 @@
 
 <script src="data.js"></script>
 <script src="config.js"></script>
-<script src="notice-logic.js"></script>
+<script src="notice-logic.js?v=20260816-order1"></script>
 <script>
 let currentStudent = null;
 let calDate = new Date();
@@ -717,8 +717,7 @@ function renderAll(){
 /* ===================== 공지사항 ===================== */
 function noticesForStudent(){
   return notices
-    .filter(n => n.audience==='all' || (currentStudent && n.audience===currentStudent.id))
-    .sort((a,b)=> (b.urgent - a.urgent) || (b.date.localeCompare(a.date)));
+    .filter(n => n.audience==='all' || (currentStudent && n.audience===currentStudent.id));
 }
 
 function pastNotices(){

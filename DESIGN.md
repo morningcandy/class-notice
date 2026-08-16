@@ -53,7 +53,7 @@ Google Sheets를 두 사이트의 단일 원본으로 사용한다. 교사용 �
 {
   "ok": true,
   "student": { "num": 1, "name": "1번" },
-  "notices": [{ "id": "N...", "date": "2026-08-16", "dueDate": "2026-08-18", "endsAt": "2026-08-18" }],
+  "notices": [{ "id": "N...", "date": "2026-08-16", "dueDate": "2026-08-18", "endsAt": "2026-08-18", "sortOrder": 10 }],
   "tasks": []
 }
 ```
@@ -71,13 +71,14 @@ Google Sheets를 두 사이트의 단일 원본으로 사용한다. 교사용 �
 }
 ```
 
-주요 action은 `adminLoad`, `validateStudentSetup`, `ingest`, `ingestPrepared`, `importLegacyStudents`, `upsertPlannerItem`, `setPlannerStatus`, `deletePlannerItem`, `createNotice`, `updateNotice`, `setNoticeStatus`, `recordResponse`이다.
+주요 action은 `adminLoad`, `validateStudentSetup`, `ingest`, `ingestPrepared`, `importLegacyStudents`, `upsertPlannerItem`, `setPlannerStatus`, `deletePlannerItem`, `createNotice`, `updateNotice`, `setNoticeStatus`, `reorderNotices`, `recordResponse`이다.
 
 ## 화면과 권한
 
 - 학생 화면 `/`: 로그인 전에는 게시된 전체 공지만 표시한다.
 - 개인 코드 확인 후: 전체 공지와 해당 학생의 개별 공지만 표시한다.
 - 현재 공지는 요일별 화면으로 나누지 않고 종료되지 않은 안내를 한 목록에 표시한다.
+- 학생 공지는 개인 알림장 검토함에서 저장한 `sortOrder`를 중요도·날짜보다 우선해 표시한다.
 - 종료일은 `endsAt → dueDate → 안내일` 순으로 사용하며, 종료일 다음 날부터 지난 공지로 자동 이동한다.
 - 관리자 화면 `/admin/`: 관리자 토큰 검증 후 공지 추가·수정·게시·보류·종료를 수행한다.
 - 개인 코드와 관리자 토큰의 원문은 저장소에 저장하지 않는다.
@@ -96,7 +97,7 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
 - 배포 기준: GitHub Pages `main` 브랜치 루트
 - 데이터 API: `config.js`의 Apps Script URL
 - 2026-08-15 확인: 학생 사이트와 관리자 사이트 모두 HTTP 200
-- 2026-08-16 확인: Apps Script v3 스키마의 운영 배포 버전 9를 기존 웹앱 URL에 적용하고 공지 종료일 반환을 검증
+- 2026-08-16 확인: Apps Script v3 스키마의 운영 배포 버전 10을 기존 웹앱 URL에 적용하고 관리자 지정 공지 순서 반환을 검증
 
 ## 구현된 내용
 
@@ -118,6 +119,7 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
 - [x] 개인코드 중복 시 잘못된 학생으로 인증되지 않도록 인증 거부
 - [x] 현재 유효한 안내를 요일 구분 없이 한 목록으로 표시
 - [x] 종료일 당일까지 현재 공지, 다음 날부터 지난 공지로 자동 분류
+- [x] 개인 알림장 검토함의 관리자 지정 순서를 학생 공지 목록에 동일하게 반영
 
 ## 남은 개발 항목
 
@@ -128,6 +130,21 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
 - [ ] **P2** 학생에게 개인 코드 분실 시 재발급·문의 방법을 안내한다.
 
 ## 최근 작업
+
+### 2026-08-16 — 관리자 지정 공지 순서 반영
+
+- 확인한 문제
+  - 개인 알림장 검토함은 생성 시각, 학생 화면은 중요도·날짜로 재정렬해 교사가 정한 전달 순서가 유지되지 않음
+- 개발 내용
+  - Google Sheets 공지 행에 `sort_order`를 추가하고 `reorderNotices`로 영구 저장
+  - 학생 API에 `sortOrder`를 포함하고 학생 화면의 최우선 정렬 기준으로 적용
+  - 순서를 지정하지 않은 기존 공지는 기존 중요도·날짜 정렬을 대체 규칙으로 유지
+- 검증
+  - `등교시간 안내 → 개학식 및 대청소 → 정상수업 시작` 관리자 순서를 재현하는 자동 테스트 포함 4개 통과
+  - 운영 Apps Script 버전 10에서 점검 공지 3건의 `sortOrder 10 → 20 → 30` 및 동일 제목 순서 반환 확인
+  - 점검 공지는 검증 후 모두 종료 처리
+- 가장 명확한 다음 단계
+  - 실제 공지를 검토함에서 원하는 순서로 정한 뒤 게시해 학생 화면에서 확인한다.
 
 ### 2026-08-16 — 현재 안내 통합 표시 및 종료일 자동 보관
 

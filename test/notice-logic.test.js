@@ -24,3 +24,12 @@ test('returns one current list and a separate past list', () => {
   assert.deepEqual(result.current.map((notice) => notice.id), ['urgent', 'current']);
   assert.deepEqual(result.past.map((notice) => notice.id), ['past']);
 });
+
+test('uses the manager order before urgency and dates', () => {
+  const result = splitNotices([
+    { id: 'normal-class', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 30 },
+    { id: 'arrival', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 10 },
+    { id: 'opening-cleanup', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 20, urgent: true },
+  ], '2026-08-16');
+  assert.deepEqual(result.current.map((notice) => notice.id), ['arrival', 'opening-cleanup', 'normal-class']);
+});
