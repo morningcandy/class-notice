@@ -575,6 +575,7 @@
 <script src="config.js"></script>
 <script src="notice-logic.js?v=20260816-order1"></script>
 <script src="notice-content.js?v=20260816-files1"></script>
+<script src="student-code.js?v=20260816-code1"></script>
 <script>
 let currentStudent = null;
 let calDate = new Date();
@@ -609,12 +610,9 @@ const SHEET_API = window.CLASS_NOTICE_CONFIG.apiUrl;
 let notices = [];
 let tasks = [];
 
-/* 코드 정규화: 숫자만 남기고 왼쪽을 0으로 채워 6자리로.
-   (1번 학생이 "19596"만 쳐도 "019596"으로 인식됨) */
+/* 개인 코드는 반드시 두 자리 번호 + 휴대폰 뒤 4자리의 정확한 6자리다. */
 function normalizeCode(raw){
-  let d = String(raw||'').replace(/\D/g,'');
-  if(d.length < 6) d = d.padStart(6,'0');
-  return d;
+  return ClassNoticeStudentCode.normalize(raw);
 }
 
 /* 서버(구글시트 문지기)에서 공지/할일을 가져온다.
@@ -645,6 +643,7 @@ async function submitCode(){
   const raw = input ? input.value.trim() : '';
   if(!raw){ if(msg) msg.textContent = '코드를 입력해주세요.'; return; }
   const code = normalizeCode(raw);
+  if(!code){ if(msg) msg.textContent = '번호 2자리와 휴대폰 뒤 4자리를 합친 숫자 6자리를 입력해주세요.'; return; }
   if(msg) msg.textContent = '확인 중…';
   try{
     await loadData(code);
@@ -681,11 +680,11 @@ function renderIdentityBox(){
   } else {
     box.innerHTML = `
       <div class="identity-row">
-        <input type="text" id="codeInput" placeholder="번호+휴대폰 뒤 4자리 (예: 019596)" maxlength="6" inputmode="numeric"
+        <input type="text" id="codeInput" placeholder="번호+휴대폰 뒤 4자리 (예: 011234)" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
           onkeydown="if(event.key==='Enter') submitCode()">
         <button onclick="submitCode()">확인</button>
       </div>
-      <div class="identity-hint" style="font-size:12px;opacity:.7;margin-top:4px">내 반 번호(2자리) + 내 휴대폰 뒤 4자리 = 6자리 코드예요. 예) 1번이고 폰 뒤가 9596이면 <b>019596</b></div>
+      <div class="identity-hint" style="font-size:12px;opacity:.7;margin-top:4px">내 번호를 두 자리로 쓰고 휴대폰 뒤 4자리를 붙인 6자리 코드예요. 예) 1번이고 휴대폰 뒤가 1234이면 <b>011234</b></div>
       <div class="identity-msg" id="identityMsg"></div>
     `;
   }
