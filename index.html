@@ -542,7 +542,8 @@
   </section>
 
   <section>
-    <div class="section-title">📅 일정 달력</div>
+    <div class="section-title">📅 학사일정 달력</div>
+    <div style="font-size:12px;color:var(--text-sub);margin:-4px 0 8px">공지와 할 일은 달력에 자동 반영하지 않습니다.</div>
     <div class="calendar">
       <div class="cal-header">
         <div class="cal-nav">
@@ -965,10 +966,9 @@ function isGreyedOut(dateStr){
   return true;
 }
 
-function eventDatesForStudent(){
+function academicEventDates(){
+  // 달력은 data.js의 학사일정만 사용한다. 공지·할 일은 별도 요청 없이 합치지 않는다.
   const dates = new Set();
-  tasksForStudent().forEach(t=>dates.add(t.dueDate));
-  noticesForStudent().forEach(n=>dates.add(n.date));
   if(typeof calendarEvents !== 'undefined'){
     calendarEvents.forEach(e=>dates.add(e.date));
   }
@@ -1005,17 +1005,14 @@ function showDayDetail(dateStr){
   if(typeof calendarEvents !== 'undefined'){
     calendarEvents.filter(e=>e.date===dateStr).forEach(e=>items.push(`🏫 ${e.title}`));
   }
-  noticesForStudent().filter(n=>n.date===dateStr).forEach(n=>items.push(`📢 [안내] ${n.title}`));
-  tasksForStudent().filter(t=>t.dueDate===dateStr).forEach(t=>items.push(`📌 [할 일] ${t.title}`));
-
   const detail = document.getElementById('dayDetail');
   const title = document.getElementById('dayDetailTitle');
   const list = document.getElementById('dayDetailList');
   const d = new Date(dateStr);
-  title.textContent = `${d.getMonth()+1}월 ${d.getDate()}일 일정`;
+  title.textContent = `${d.getMonth()+1}월 ${d.getDate()}일 학사일정`;
   list.innerHTML = items.length
     ? items.map(i=>`<li>${escapeHtml(i)}</li>`).join('')
-    : '<li>등록된 일정이 없어요</li>';
+    : '<li>등록된 학사일정이 없어요</li>';
   detail.style.display = 'block';
 }
 
@@ -1071,7 +1068,7 @@ function renderCalendar(){
   const dows = ['일','월','화','수','목','금','토'];
   const firstDay = new Date(y,m,1).getDay();
   const lastDate = new Date(y,m+1,0).getDate();
-  const eventDates = eventDatesForStudent();
+  const eventDates = academicEventDates();
   const today = todayStr();
 
   let html = dows.map(d=>`<div class="dow">${d}</div>`).join('');
