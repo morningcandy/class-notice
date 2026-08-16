@@ -205,6 +205,13 @@
     color:#4a4e63;
     line-height:1.5;
   }
+  .notice-text + .notice-table-wrap,.notice-table-wrap + .notice-text{margin-top:9px;}
+  .notice-table-wrap{max-width:100%;overflow-x:auto;border:1px solid var(--border);border-radius:9px;background:#fff;}
+  .notice-table{width:100%;min-width:360px;border-collapse:collapse;font-size:12px;white-space:nowrap;}
+  .notice-table th,.notice-table td{padding:7px 8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);text-align:center;}
+  .notice-table th{background:var(--primary-light);color:var(--primary);font-weight:700;}
+  .notice-table th:last-child,.notice-table td:last-child{border-right:0;}
+  .notice-table tbody tr:last-child td{border-bottom:0;}
   .notice-card .ndate{
     font-size:11px;
     color:var(--text-sub);
@@ -262,21 +269,6 @@
     color:var(--text);
     flex:1;
   }
-
-  .file-btn{
-    display:inline-flex;
-    align-items:center;
-    gap:4px;
-    margin-top:8px;
-    padding:6px 10px;
-    background:var(--primary-light);
-    color:var(--primary);
-    border-radius:8px;
-    font-size:12px;
-    font-weight:600;
-    text-decoration:none;
-  }
-  .file-btn:hover{background:#dfe6fd;}
 
   .notice-subheader{
     font-size:11.5px;
@@ -582,6 +574,7 @@
 <script src="data.js"></script>
 <script src="config.js"></script>
 <script src="notice-logic.js?v=20260816-order1"></script>
+<script src="notice-content.js?v=20260816-files1"></script>
 <script>
 let currentStudent = null;
 let calDate = new Date();
@@ -594,14 +587,6 @@ function escapeHtml(value){
   return String(value ?? '')
     .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
     .replaceAll('"','&quot;').replaceAll("'",'&#039;');
-}
-function safeUrl(value){
-  try{
-    const raw = String(value || '').trim();
-    if(!raw) return '';
-    const url = new URL(raw, location.href);
-    return /^https?:$/.test(url.protocol) ? url.href : '';
-  }catch(e){ return ''; }
 }
 function todayStr(){ return fmtDate(new Date()); }
 function shiftDateStr(dateStr, delta){
@@ -760,13 +745,6 @@ function toggleNoticeRead(studentId, noticeId){
   }
 }
 
-function fileButtonHtml(n){
-  const url = safeUrl(n.fileUrl);
-  if(!url) return '';
-  const label = n.fileName || '첨부파일';
-  return `<a class="file-btn" href="${escapeHtml(url)}" target="_blank" rel="noopener">📎 ${escapeHtml(label)} 보기</a>`;
-}
-
 function noticeCardHtml(n, opts){
   opts = opts || {};
   const identified = !!currentStudent;
@@ -790,8 +768,7 @@ function noticeCardHtml(n, opts){
           ${n.urgent?'<span class="tag urgent">중요</span>':''}
           ${unread?'<span class="tag new">안읽음</span>':''}
         </div>
-        ${n.content ? `<div class="ncontent">${escapeHtml(n.content)}</div>` : ''}
-        ${fileButtonHtml(n)}
+        ${n.content ? `<div class="ncontent">${ClassNoticeContent.render(n.content)}</div>` : ''}
         <div class="ndate">${escapeHtml(dateText)}</div>
       </div>
     </div>
