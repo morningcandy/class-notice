@@ -69,7 +69,7 @@ Google Sheets를 두 사이트의 단일 원본으로 사용한다. 교사용 �
 }
 ```
 
-주요 action은 `adminLoad`, `ingest`, `ingestPrepared`, `importLegacyStudents`, `upsertPlannerItem`, `setPlannerStatus`, `deletePlannerItem`, `createNotice`, `updateNotice`, `setNoticeStatus`, `recordResponse`이다.
+주요 action은 `adminLoad`, `validateStudentSetup`, `ingest`, `ingestPrepared`, `importLegacyStudents`, `upsertPlannerItem`, `setPlannerStatus`, `deletePlannerItem`, `createNotice`, `updateNotice`, `setNoticeStatus`, `recordResponse`이다.
 
 ## 화면과 권한
 
@@ -92,7 +92,7 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
 - 배포 기준: GitHub Pages `main` 브랜치 루트
 - 데이터 API: `config.js`의 Apps Script URL
 - 2026-08-15 확인: 학생 사이트와 관리자 사이트 모두 HTTP 200
-- 2026-08-16 확인: Apps Script v3 스키마의 운영 배포 버전 6을 기존 웹앱 URL에 적용하고 학생 28명의 개인코드 이전을 검증
+- 2026-08-16 확인: Apps Script v3 스키마의 운영 배포 버전 7을 기존 웹앱 URL에 적용하고 학생 28명의 개인코드 이전·인증 자체 진단을 검증
 
 ## 구현된 내용
 
@@ -130,9 +130,11 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
 - 개발 내용
   - 기존 `명단(번호·이름·코드)`을 앱 전용 학생목록으로 자동 이전
   - 중복 코드는 인증과 학생 응답에서 거부하도록 안전성 보강
-  - Apps Script 운영 배포 버전 6 적용
+  - Apps Script 운영 배포 버전 7 적용
 - 검증
   - 활성 학생 28명, 개인코드 설정 28명, 중복 코드 0개
+  - 코드 원문을 반환하지 않는 로그인 자체 진단 `authReady`, `loginProbe` 성공
+  - 운영 `[학급]` 번호 목록이 검토대기 공지 2건으로 분리되는지 재검증 후 점검 데이터 종료 처리
   - 운영 학생 화면의 개인코드 조회와 응답 전송이 같은 Apps Script URL을 사용함
 - 가장 명확한 다음 단계
   - 서로 다른 실제 학생 코드 두 개로 각자의 개별 공지만 보이는지 모바일에서 확인한다.
