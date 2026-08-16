@@ -19,6 +19,7 @@
     content: $('#contentInput'), noticeDate: $('#noticeDateInput'), dueDate: $('#dueDateInput'),
     urgent: $('#urgentInput'), formError: $('#formError'), closeDialog: $('#closeDialogBtn'),
     cancelDialog: $('#cancelDialogBtn'), saveNotice: $('#saveNoticeBtn'), toast: $('#toast'),
+    studentSetupBanner: $('#studentSetupBanner'), studentSetupText: $('#studentSetupText'), studentSheetLink: $('#studentSheetLink'),
   };
 
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({
@@ -66,6 +67,7 @@
       ui.adminView.classList.remove('hidden');
       ui.syncText.textContent = `마지막 동기화 ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
       renderStudents();
+      renderStudentSetup();
       render();
     } catch (error) {
       state.token = '';
@@ -80,6 +82,7 @@
     state.students = Array.isArray(result.students) ? result.students.filter((student) => student.active !== false) : [];
     ui.syncText.textContent = `마지막 동기화 ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
     renderStudents();
+    renderStudentSetup();
     render();
   }
 
@@ -92,6 +95,16 @@
         return `<label class="student-choice"><input type="checkbox" value="${esc(id)}" ${selectedSet.has(id) ? 'checked' : ''}><span>${esc(label)}</span></label>`;
       }).join('')
       : '<p class="muted">앱_학생목록에 활성 학생을 입력해주세요.</p>';
+  }
+
+  function renderStudentSetup() {
+    const coded = state.students.filter((student) => student.has_code).length;
+    const ready = state.students.length > 0 && coded === state.students.length;
+    ui.studentSetupBanner.classList.toggle('hidden', ready);
+    ui.studentSetupText.textContent = state.students.length
+      ? `활성 학생 ${state.students.length}명 중 개인 코드가 설정된 학생은 ${coded}명입니다.`
+      : '현재 앱_학생목록에 활성 학생이 0명이라 개인 코드 로그인이 작동하지 않습니다.';
+    ui.studentSheetLink.href = window.CLASS_NOTICE_CONFIG.sheetUrl || '#';
   }
 
   function statusCount(status) { return state.notices.filter((notice) => notice.status === status).length; }
