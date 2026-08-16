@@ -529,15 +529,8 @@
   </header>
 
   <section>
-    <div class="section-title">📢 오늘의 안내 <span class="badge" id="noticeCount">0</span></div>
-    <div class="notice-datenav">
-      <button class="nd-arrow" onclick="changeNoticeDate(-1)" aria-label="이전 날">‹</button>
-      <span class="nd-label" id="noticeDateLabel" onclick="openNoticeDatePicker()">-</span>
-      <input type="date" id="noticeDateInput" class="nd-input" style="display:none"
-        onchange="jumpNoticeDate(this.value)" onblur="hideNoticeDatePicker()">
-      <button class="nd-arrow" onclick="changeNoticeDate(1)" aria-label="다음 날">›</button>
-      <button class="today-btn" onclick="noticeGoToday()">오늘</button>
-    </div>
+    <div class="section-title">📢 학급 안내사항 <span class="badge" id="noticeCount">0</span></div>
+    <div class="section-sub">종료일까지 한곳에 표시되고, 다음 날 지난 공지로 자동 이동합니다.</div>
     <div id="noticeList"></div>
     <button class="archive-toggle" id="archiveToggle" onclick="toggleArchive()">지난 공지 보기</button>
     <div id="archiveList"></div>
@@ -587,6 +580,7 @@
 
 <script src="data.js"></script>
 <script src="config.js"></script>
+<script src="notice-logic.js"></script>
 <script>
 let currentStudent = null;
 let calDate = new Date();
@@ -619,9 +613,6 @@ function labelDate(dateStr){
   const wd = ['일','월','화','수','목','금','토'][d.getDay()];
   return `${d.getMonth()+1}월 ${d.getDate()}일 (${wd})`;
 }
-
-/* '오늘의 안내'에서 보고 있는 날짜 (기본 = 오늘) */
-let noticeViewDate = todayStr();
 
 /* ===================== 개인 코드 확인 ===================== */
 const MYCODE_KEY = 'classNoticeApp_myCode';
@@ -731,8 +722,10 @@ function noticesForStudent(){
 }
 
 function pastNotices(){
-  const today = todayStr();
-  return noticesForStudent().filter(n => n.date < today);
+  return ClassNoticeLogic.splitNotices(noticesForStudent(), todayStr()).past;
+}
+function currentNotices(){
+  return ClassNoticeLogic.splitNotices(noticesForStudent(), todayStr()).current;
 }
 
 /* 학생이 안내를 확인했는지(읽음) 여부 - 이 브라우저에만 저장됨 */
@@ -782,6 +775,10 @@ function noticeCardHtml(n, opts){
   const checkboxHtml = identified
     ? `<input type="checkbox" class="notice-checkbox" ${read?'checked':''} onchange='toggleNoticeRead(${JSON.stringify(currentStudent.id)}, ${JSON.stringify(n.id)})'>`
     : `<span class="checkbox-placeholder" title="개인 코드 입력 후 확인 체크 가능">✓</span>`;
+  const endDate = ClassNoticeLogic.noticeEndDate(n);
+  const dateText = endDate && endDate !== n.date
+    ? `안내 ${n.date} · ${endDate}까지`
+    : `안내 ${n.date}`;
   return `
     <div class="notice-card ${n.urgent?'urgent':''} ${opts.archived?'archived':''} ${read?'done':''}">
       ${checkboxHtml}
@@ -795,82 +792,33 @@ function noticeCardHtml(n, opts){
         </div>
         ${n.content ? `<div class="ncontent">${escapeHtml(n.content)}</div>` : ''}
         ${fileButtonHtml(n)}
-        <div class="ndate">${escapeHtml(n.date)}</div>
+        <div class="ndate">${escapeHtml(dateText)}</div>
       </div>
     </div>
   `;
 }
 
-/* 날짜 이동 컨트롤 */
-function renderNoticeDateLabel(){
-  const label = document.getElementById('noticeDateLabel');
-  if(!label) return;
-  const viewingToday = noticeViewDate === todayStr();
-  label.innerHTML = labelDate(noticeViewDate) + (viewingToday ? '<span class="nd-badge">· 오늘</span>' : '');
-}
-function changeNoticeDate(delta){
-  noticeViewDate = shiftDateStr(noticeViewDate, delta);
-  renderNotices();
-}
-function noticeGoToday(){
-  noticeViewDate = todayStr();
-  renderNotices();
-}
-function openNoticeDatePicker(){
-  const input = document.getElementById('noticeDateInput');
-  const label = document.getElementById('noticeDateLabel');
-  input.value = noticeViewDate;
-  label.style.display = 'none';
-  input.style.display = 'inline-block';
-  input.focus();
-  if(input.showPicker){ try{ input.showPicker(); }catch(e){} }
-}
-function hideNoticeDatePicker(){
-  document.getElementById('noticeDateInput').style.display = 'none';
-  document.getElementById('noticeDateLabel').style.display = 'block';
-}
-function jumpNoticeDate(value){
-  if(!value){ hideNoticeDatePicker(); return; }
-  noticeViewDate = value;
-  hideNoticeDatePicker();
-  renderNotices();
-}
-
 function renderNotices(){
-  renderNoticeDateLabel();
-  const today = todayStr();
-  const viewingToday = noticeViewDate === today;
-  const forStudent = noticesForStudent();
+  const current = currentNotices();
   const identified = !!currentStudent;
-
-  const dayList = forStudent.filter(n => n.date === noticeViewDate);
-  const upcomingList = viewingToday
-    ? forStudent.filter(n => n.date > today)
-        .sort((a,b) => (b.urgent - a.urgent) || a.date.localeCompare(b.date))
-    : [];
-
-  const unreadCount = identified ? dayList.filter(n => !isNoticeRead(currentStudent.id, n.id)).length : 0;
+  const unreadCount = identified ? current.filter(n => !isNoticeRead(currentStudent.id, n.id)).length : 0;
   const badge = document.getElementById('noticeCount');
-  badge.textContent = unreadCount>0 ? `안읽음 ${unreadCount}` : `${dayList.length}`;
+  badge.textContent = unreadCount>0 ? `안읽음 ${unreadCount}` : `${current.length}`;
   badge.className = 'badge' + (unreadCount>0 ? ' unread' : '');
 
   const el = document.getElementById('noticeList');
-  let html = '';
-  if(dayList.length){
-    html += dayList.map(n => noticeCardHtml(n)).join('');
-  } else {
-    html += `<div class="empty-state">${viewingToday ? '오늘은 새 안내가 없어요' : '이 날은 안내가 없어요'}</div>`;
-  }
-  if(upcomingList.length){
-    html += `<div class="notice-subheader">📆 아직 유효한 안내 (마감 전)</div>`;
-    html += upcomingList.map(n => noticeCardHtml(n)).join('');
-  }
-  el.innerHTML = html;
+  el.innerHTML = current.length
+    ? current.map(n => noticeCardHtml(n)).join('')
+    : '<div class="empty-state">현재 확인할 안내사항이 없어요</div>';
 
   const past = pastNotices();
   const toggleBtn = document.getElementById('archiveToggle');
   toggleBtn.textContent = `지난 공지 보기 (${past.length})`;
   toggleBtn.style.display = past.length===0 ? 'none' : 'block';
+  if(archiveOpen){
+    const archiveEl = document.getElementById('archiveList');
+    archiveEl.innerHTML = past.map(n => noticeCardHtml(n, {archived:true})).join('');
+  }
 }
 
 let archiveOpen = false;
