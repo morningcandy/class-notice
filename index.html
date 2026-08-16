@@ -295,6 +295,16 @@
   #archiveList{margin-top:10px;display:none;}
   .notice-card.archived{opacity:0.75;}
 
+  /* 학급 시간표(달력 위 고정) — 가로 스크롤 없이 한눈에 */
+  #timetableSection .tt-intro{font-size:12px;color:var(--text-sub);margin:-4px 0 10px;}
+  #classTimetable .notice-text{font-size:11.5px;color:#4a4e63;line-height:1.5;}
+  #classTimetable .notice-text + .notice-table-wrap{margin-top:0;}
+  #classTimetable .notice-table-wrap{overflow-x:visible;border:1px solid var(--border);border-radius:9px;}
+  #classTimetable .notice-table{width:100%;min-width:0;table-layout:fixed;font-size:10.5px;white-space:normal;}
+  #classTimetable .notice-table th,#classTimetable .notice-table td{padding:5px 2px;word-break:keep-all;line-height:1.2;}
+  #classTimetable .notice-table th:first-child,#classTimetable .notice-table td:first-child{width:24px;color:var(--text-sub);}
+  #classTimetable .notice-table td{color:var(--text);}
+
   /* 달력 */
   .calendar{
     border:1px solid var(--border);
@@ -533,6 +543,12 @@
     <div class="identity-box" id="identityBox"></div>
   </section>
 
+  <section id="timetableSection" style="display:none">
+    <div class="section-title">🗓️ 2학기 학급 시간표</div>
+    <div class="tt-intro">선택(A~D) 시간에 갈 교실은 개인 코드 로그인 후 ‘내 개인 공지’에서 확인하세요.</div>
+    <div id="classTimetable"></div>
+  </section>
+
   <section>
     <div class="section-title">📅 학사일정 달력</div>
     <div style="font-size:12px;color:var(--text-sub);margin:-4px 0 8px">공지와 할 일은 달력에 자동 반영하지 않습니다.</div>
@@ -574,7 +590,7 @@
 <script src="data.js"></script>
 <script src="config.js"></script>
 <script src="notice-logic.js?v=20260816-order1"></script>
-<script src="notice-content.js?v=20260816-files1"></script>
+<script src="notice-content.js?v=20260817-tt2"></script>
 <script src="student-code.js?v=20260816-code1"></script>
 <script>
 let currentStudent = null;
@@ -694,15 +710,36 @@ function renderAll(){
   selectedDate = null;
   const detail = document.getElementById('dayDetail');
   if(detail) detail.style.display = 'none';
+  renderClassTimetable();
   renderNotices();
   renderCalendar();
   renderTasks();
 }
 
 /* ===================== 공지사항 ===================== */
+/* 학급 시간표 공지는 일반 목록이 아니라 달력 위 고정 영역에 표시한다. */
+function isTimetableNotice(n){
+  return n && n.audience==='all' && typeof n.title==='string' && n.title.indexOf('학급 시간표') !== -1;
+}
 function noticesForStudent(){
   return notices
+    .filter(n => !isTimetableNotice(n))
     .filter(n => n.audience==='all' || (currentStudent && n.audience===currentStudent.id));
+}
+
+/* 달력 위에 고정 표시되는 학급 시간표 */
+function renderClassTimetable(){
+  const section = document.getElementById('timetableSection');
+  const holder = document.getElementById('classTimetable');
+  if(!section || !holder) return;
+  const tt = notices.find(isTimetableNotice);
+  if(tt && tt.content){
+    holder.innerHTML = ClassNoticeContent.render(tt.content);
+    section.style.display = 'block';
+  } else {
+    holder.innerHTML = '';
+    section.style.display = 'none';
+  }
 }
 
 function pastNotices(){
@@ -1098,6 +1135,7 @@ async function init(){
   try{
     await loadData(savedCode);
     renderIdentityBox();
+    renderClassTimetable();
     renderNotices();
     renderTasks();
   }catch(e){

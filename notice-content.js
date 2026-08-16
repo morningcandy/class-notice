@@ -11,6 +11,14 @@
       .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
   }
 
+  // 표 칸 안에서는 줄바꿈용 <br>만 허용한다(그 외 태그는 여전히 이스케이프).
+  function cellHtml(value) {
+    return escapeHtml(value)
+      .replaceAll('&lt;br&gt;', '<br>')
+      .replaceAll('&lt;br/&gt;', '<br>')
+      .replaceAll('&lt;br /&gt;', '<br>');
+  }
+
   function cells(line) {
     let value = String(line || '').trim();
     if (value.startsWith('|')) value = value.slice(1);
@@ -35,8 +43,8 @@
       rows.push(row.slice(0, header.length));
       cursor += 1;
     }
-    const head = header.map((cell) => `<th scope="col">${escapeHtml(cell)}</th>`).join('');
-    const body = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
+    const head = header.map((cell) => `<th scope="col">${cellHtml(cell)}</th>`).join('');
+    const body = rows.map((row) => `<tr>${row.map((cell) => `<td>${cellHtml(cell)}</td>`).join('')}</tr>`).join('');
     return {
       html: `<div class="notice-table-wrap"><table class="notice-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`,
       next: cursor,
