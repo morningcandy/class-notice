@@ -69,7 +69,7 @@ Google Sheets를 두 사이트의 단일 원본으로 사용한다. 교사용 �
 }
 ```
 
-주요 action은 `adminLoad`, `ingest`, `ingestPrepared`, `upsertPlannerItem`, `setPlannerStatus`, `deletePlannerItem`, `createNotice`, `updateNotice`, `setNoticeStatus`, `recordResponse`이다.
+주요 action은 `adminLoad`, `ingest`, `ingestPrepared`, `importLegacyStudents`, `upsertPlannerItem`, `setPlannerStatus`, `deletePlannerItem`, `createNotice`, `updateNotice`, `setNoticeStatus`, `recordResponse`이다.
 
 ## 화면과 권한
 
@@ -92,7 +92,7 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
 - 배포 기준: GitHub Pages `main` 브랜치 루트
 - 데이터 API: `config.js`의 Apps Script URL
 - 2026-08-15 확인: 학생 사이트와 관리자 사이트 모두 HTTP 200
-- 2026-08-16 확인: Apps Script v3 스키마의 운영 배포 버전 5를 기존 웹앱 URL에 적용하고 번호 목록의 개별 검토 초안 생성을 검증
+- 2026-08-16 확인: Apps Script v3 스키마의 운영 배포 버전 6을 기존 웹앱 URL에 적용하고 학생 28명의 개인코드 이전을 검증
 
 ## 구현된 내용
 
@@ -110,16 +110,32 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
 - [x] 일반 `확인·완료` 문구의 공지/할 일 오분류 수정과 학생 공지 노출 재검증
 - [x] 번호 목록의 각 학급 안내를 별도 검토대기 초안으로 생성
 - [x] 학생·개인 코드 0건 또는 누락 상태를 관리자 화면에 경고하고 원본 시트 바로가기 제공
+- [x] 기존 `명단`의 학생 28명과 개인코드 28개를 앱 전용 학생목록으로 이전
+- [x] 개인코드 중복 시 잘못된 학생으로 인증되지 않도록 인증 거부
 
 ## 남은 개발 항목
 
 - [ ] **P0** 서로 다른 학생 코드 두 개로 개별 공지 격리가 유지되는지 종단 간 테스트한다.
 - [ ] **P1** 초기 관리자 비밀번호 `admin1234`를 개인 비밀번호로 변경한다.
-- [ ] **P1** 학생 명단과 개인 코드의 중복·누락·비활성 상태를 점검한다.
+- [x] **P1** 학생 명단과 개인 코드의 중복·누락·비활성 상태를 점검한다.
 - [ ] **P1** 휴대전화 화면에서 개인 코드 로그인과 확인·완료 체크를 테스트한다.
 - [ ] **P2** 학생에게 개인 코드 분실 시 재발급·문의 방법을 안내한다.
 
 ## 최근 작업
+
+### 2026-08-16 — 기존 명단 이전으로 개인코드 로그인 복구
+
+- 확인한 원인
+  - 학생 화면은 운영 Apps Script에 코드를 정상 전송했지만 새 `앱_학생목록`에 인증 대상이 없었음
+- 개발 내용
+  - 기존 `명단(번호·이름·코드)`을 앱 전용 학생목록으로 자동 이전
+  - 중복 코드는 인증과 학생 응답에서 거부하도록 안전성 보강
+  - Apps Script 운영 배포 버전 6 적용
+- 검증
+  - 활성 학생 28명, 개인코드 설정 28명, 중복 코드 0개
+  - 운영 학생 화면의 개인코드 조회와 응답 전송이 같은 Apps Script URL을 사용함
+- 가장 명확한 다음 단계
+  - 서로 다른 실제 학생 코드 두 개로 각자의 개별 공지만 보이는지 모바일에서 확인한다.
 
 ### 2026-08-16 — 개인 코드 준비 상태 진단 표시
 
@@ -128,8 +144,8 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
 - 개발 내용
   - 관리자 화면에 활성 학생 수와 코드 설정 수를 비교한 경고 배너 추가
   - Google Sheets의 `앱_학생목록`으로 이동하는 바로가기 추가
-- 남은 설정
-  - 실제 학생의 `student_id`, 번호, 이름, 개인 코드, 활성 여부 입력은 교사가 완료해야 함
+- 후속 처리
+  - 기존 명단 28명을 자동 이전해 활성 학생과 개인코드를 모두 설정함
 - 가장 명확한 다음 단계
   - 실제 코드 두 개를 입력한 후 학생별 개별 공지 격리와 확인·완료 응답을 검증한다.
 
