@@ -659,7 +659,7 @@ async function submitCode(){
   const raw = input ? input.value.trim() : '';
   if(!raw){ if(msg) msg.textContent = '코드를 입력해주세요.'; return; }
   const code = normalizeCode(raw);
-  if(!code){ if(msg) msg.textContent = '번호 2자리와 휴대폰 뒤 4자리를 합친 숫자 6자리를 입력해주세요.'; return; }
+  if(!code){ if(msg) msg.textContent = '학번 뒤 2자리와 휴대폰 뒤 4자리를 합친 숫자 6자리를 입력해주세요.'; return; }
   if(msg) msg.textContent = '확인 중…';
   try{
     await loadData(code);
@@ -696,11 +696,11 @@ function renderIdentityBox(){
   } else {
     box.innerHTML = `
       <div class="identity-row">
-        <input type="text" id="codeInput" placeholder="번호+휴대폰 뒤 4자리 (예: 011234)" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+        <input type="text" id="codeInput" placeholder="학번 뒤 2자리+휴대폰 뒤 4자리 (예: 261234)" maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
           onkeydown="if(event.key==='Enter') submitCode()">
         <button onclick="submitCode()">확인</button>
       </div>
-      <div class="identity-hint" style="font-size:12px;opacity:.7;margin-top:4px">내 번호를 두 자리로 쓰고 휴대폰 뒤 4자리를 붙인 6자리 코드예요. 예) 1번이고 휴대폰 뒤가 1234이면 <b>011234</b></div>
+      <div class="identity-hint" style="font-size:12px;opacity:.7;margin-top:4px"><b>학번 뒤 두 자리</b>에 휴대폰 뒤 4자리를 붙인 6자리 코드예요. 예) 학번 20326, 휴대폰 뒤 1234이면 <b>261234</b> (출석 순번이 아니라 학번이에요)</div>
       <div class="identity-msg" id="identityMsg"></div>
     `;
   }
