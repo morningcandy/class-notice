@@ -305,6 +305,23 @@
   #classTimetable .notice-table th:first-child,#classTimetable .notice-table td:first-child{width:24px;color:var(--text-sub);}
   #classTimetable .notice-table td{color:var(--text);}
 
+  /* 고사 시간표(학급 시간표 위) — 날짜를 열로 두어 한눈에 */
+  #examSection .exam-intro{font-size:12px;color:var(--text-sub);margin:-4px 0 10px;}
+  .exam-table-wrap{border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff;}
+  .exam-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11.5px;}
+  .exam-table th,.exam-table td{padding:7px 3px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);text-align:center;word-break:keep-all;line-height:1.3;}
+  .exam-table th{background:var(--primary-light);color:var(--primary);font-weight:700;}
+  .exam-table th .wd{display:block;font-size:10px;font-weight:600;opacity:.75;}
+  .exam-table th:first-child,.exam-table td:first-child{width:50px;}
+  .exam-table th:last-child,.exam-table td:last-child{border-right:0;}
+  .exam-table tbody tr:last-child td{border-bottom:0;}
+  .exam-table td{color:var(--text);font-weight:600;}
+  .exam-table td.time{font-size:10px;color:var(--text-sub);font-weight:500;line-height:1.25;}
+  .exam-table td.time b{display:block;color:var(--text);font-size:11px;}
+  .exam-table td.none{color:#c3c6d4;font-weight:400;}
+  .exam-table th.today{background:var(--primary);color:#fff;}
+  .exam-table td.today{background:#fff8e1;}
+
   /* 달력 */
   .calendar{
     border:1px solid var(--border);
@@ -543,6 +560,12 @@
     <div class="identity-box" id="identityBox"></div>
   </section>
 
+  <section id="examSection" style="display:none">
+    <div class="section-title" id="examTitle">📝 고사 시간표</div>
+    <div class="exam-intro" id="examIntro"></div>
+    <div id="examSchedule"></div>
+  </section>
+
   <section id="timetableSection" style="display:none">
     <div class="section-title">🗓️ 2학기 학급 시간표</div>
     <div class="tt-intro">선택(A~D) 시간에 갈 교실은 개인 코드 로그인 후 ‘내 개인 공지’에서 확인하세요.</div>
@@ -587,7 +610,7 @@
   <footer>매일 자동으로 마감 여부가 갱신됩니다</footer>
 </div>
 
-<script src="data.js"></script>
+<script src="data.js?v=20260914-exam1"></script>
 <script src="config.js"></script>
 <script src="notice-logic.js?v=20260816-order1"></script>
 <script src="notice-content.js?v=20260817-tt2"></script>
@@ -740,6 +763,46 @@ function renderClassTimetable(){
     holder.innerHTML = '';
     section.style.display = 'none';
   }
+}
+
+/* 학급 시간표 위에 표시되는 고사 시간표. data.js의 examSchedules에서 2학년 열만 쓴다.
+   시험 마지막 날이 지나면 다음 고사가 입력될 때까지 숨긴다. */
+const CLASS_GRADE = 2;
+function renderExamSchedule(){
+  const section = document.getElementById('examSection');
+  const holder = document.getElementById('examSchedule');
+  if(!section || !holder) return;
+  const list = (typeof examSchedules !== 'undefined' && Array.isArray(examSchedules)) ? examSchedules : [];
+  const today = todayStr();
+  const exam = list.find(e => e.end >= today);
+  if(!exam){
+    holder.innerHTML = '';
+    section.style.display = 'none';
+    return;
+  }
+  const gi = CLASS_GRADE - 1;
+  const WD = ['일','월','화','수','목','금','토'];
+  const md = d => `${Number(d.slice(5,7))}월 ${Number(d.slice(8,10))}일(${WD[new Date(d+'T00:00:00').getDay()]})`;
+  const head = exam.days.map(d => {
+    const cls = d.date === today ? ' class="today"' : '';
+    return `<th${cls}>${Number(d.date.slice(5,7))}/${Number(d.date.slice(8,10))}<span class="wd">${WD[new Date(d.date+'T00:00:00').getDay()]}</span></th>`;
+  }).join('');
+  const rowCount = Math.max(...exam.days.map(d => d.slots.length));
+  const rows = [];
+  for(let i = 0; i < rowCount; i++){
+    const cells = exam.days.map(d => (d.slots[i] && d.slots[i].grades[gi]) || '');
+    if(cells.every(c => !c)) continue;
+    const ref = exam.days.find(d => d.slots[i]).slots[i];
+    const tds = cells.map((c, k) => {
+      const cls = [c ? '' : 'none', exam.days[k].date === today ? 'today' : ''].filter(Boolean).join(' ');
+      return `<td${cls ? ` class="${cls}"` : ''}>${c ? escapeHtml(c) : '·'}</td>`;
+    }).join('');
+    rows.push(`<tr><td class="time"><b>${i+1}교시</b>${escapeHtml(ref.start)}<br>${escapeHtml(ref.end)}</td>${tds}</tr>`);
+  }
+  document.getElementById('examTitle').textContent = `📝 ${exam.title} 시간표`;
+  document.getElementById('examIntro').textContent = `${md(exam.start)} ~ ${md(exam.end)} · ${CLASS_GRADE}학년`;
+  holder.innerHTML = `<div class="exam-table-wrap"><table class="exam-table"><thead><tr><th>시간</th>${head}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  section.style.display = 'block';
 }
 
 function pastNotices(){
@@ -1130,6 +1193,7 @@ async function init(){
   document.getElementById('headerDate').textContent =
     `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준 안내`;
   renderCalendar();      // 달력은 정적 data.js라 항상 표시
+  renderExamSchedule();  // 고사 시간표도 정적 data.js라 네트워크와 무관하게 표시
   renderIdentityBox();   // 로그인 입력창을 즉시 표시(네트워크 대기 전)
   const savedCode = localStorage.getItem(MYCODE_KEY) || '';
   try{
