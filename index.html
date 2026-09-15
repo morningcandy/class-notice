@@ -67,6 +67,26 @@
 
   section{padding:18px 20px;}
   section + section{border-top:8px solid var(--gray-bg);}
+
+  /* 2단 배치: 좁은 화면은 지금처럼 한 줄로 쌓이고,
+     넓은 화면에서만 왼쪽=공지, 오른쪽=고사 시간표·학급 시간표·학사일정으로 나뉜다. */
+  .content-grid{display:flex;flex-direction:column;}
+  .main-column,.side-column{display:flex;flex-direction:column;min-width:0;}
+  .side-column{border-top:8px solid var(--gray-bg);}
+  .main-column > section:first-child{border-top:none;}
+  @media (min-width:940px){
+    .app{max-width:1080px;}
+    .content-grid{
+      display:grid;
+      grid-template-columns:minmax(0,1.4fr) minmax(380px,1fr);
+      align-items:stretch;
+    }
+    .side-column{
+      border-top:none;
+      border-left:8px solid var(--gray-bg);
+    }
+    .side-column > section:first-child{border-top:none;}
+  }
   .section-title{
     font-size:15px;
     font-weight:700;
@@ -547,6 +567,9 @@
     <div class="sub" id="headerDate">-</div>
   </header>
 
+  <div class="content-grid">
+   <div class="main-column">
+
   <section>
     <div class="section-title">📢 학급 안내사항 <span class="badge" id="noticeCount">0</span></div>
     <div class="section-sub">종료일까지 한곳에 표시되고, 다음 날 지난 공지로 자동 이동합니다.</div>
@@ -559,6 +582,16 @@
     <div class="section-title">🔑 내 개인 공지 확인하기</div>
     <div class="identity-box" id="identityBox"></div>
   </section>
+
+  <section>
+    <div class="section-title">✅ 제출 / 할 일 현황</div>
+    <div class="section-sub" id="taskSub"></div>
+    <div id="taskList"></div>
+  </section>
+
+   </div><!-- /main-column -->
+
+   <aside class="side-column">
 
   <section id="examSection" style="display:none">
     <div class="section-title" id="examTitle">📝 고사 시간표</div>
@@ -601,11 +634,8 @@
     </div>
   </section>
 
-  <section>
-    <div class="section-title">✅ 제출 / 할 일 현황</div>
-    <div class="section-sub" id="taskSub"></div>
-    <div id="taskList"></div>
-  </section>
+   </aside><!-- /side-column -->
+  </div><!-- /content-grid -->
 
   <footer>매일 자동으로 마감 여부가 갱신됩니다</footer>
 </div>
