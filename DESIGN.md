@@ -113,8 +113,8 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
 
 ## 구현된 내용
 
-- [x] 게시된 전체 공지와 할 일 표시
-- [x] 개인 코드 입력 후 본인 개별 공지·할 일 표시
+- [x] 게시된 전체 공지 표시 (할 일 현황은 2026-09-15 제거)
+- [x] 개인 코드 입력 후 본인 개별 공지 표시
 - [x] 다른 학생의 이름·코드·개별 공지를 응답에서 제외하는 API 설계
 - [x] 학생 확인·완료 응답 전송 UI
 - [x] `/admin/` 관리자 로그인 화면
@@ -144,21 +144,35 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
 
 ## 최근 작업
 
+### 2026-09-15 — 학생앱 제출/할 일 현황 섹션 제거
+
+- 확인한 원인/배경
+  - 2단 배치로 옮기면서 할 일 현황을 왼쪽 열로 올렸더니 모바일 순서가 바뀌었고, 교사가 이 섹션 자체를 쓰지 않기로 함
+- 개발 내용
+  - `index.html`에서 `#taskList`·`#taskSub` 섹션과 `.task-*`·`.status-pill` CSS 제거
+  - `tasks` 상태, `tasksForStudent`/`taskStatus`/`renderTasks`/`toggleTaskDone`과 `classNoticeApp_taskDone` localStorage 로직 제거. `renderAll`·`init`·`showConnError`의 할 일 분기도 정리
+  - **남겨 둔 것**: `submitResponse`(공지 확인 체크가 계속 사용), `.checkbox-placeholder`(공지 카드가 사용), Apps Script의 `tasks` 응답 필드(학생앱이 무시할 뿐 API 계약은 그대로)
+  - 결과로 학생앱은 `앱_학생응답`에 `할일` 유형을 더 이상 기록하지 않는다(`공지` 확인만 기록)
+- 검증
+  - 1280px: main 630 / side 450, 왼쪽 공지·개인 공지 / 오른쪽 중간고사→학급 시간표→학사일정
+  - 375px: 1단, 공지 → 개인 공지 → 중간고사 → 학급 시간표 → 학사일정, 가로 스크롤 없음
+  - `renderAll()`·`toggleArchive()` 실행 후 `window.onerror` 0건, 공지 카드·학급 시간표 정상 렌더
+
 ### 2026-09-15 — 넓은 화면 2단 배치(왼쪽 공지 / 오른쪽 시간표·달력)
 
 - 확인한 원인/배경
   - 개인 알림장(`class-planner`)은 이미 `content-grid`로 본문·사이드 2단인데 학급 알림장만 480px 한 줄이라 PC에서 공지를 보려면 시간표·달력을 한참 지나쳐야 했음
 - 개발 내용
   - `index.html`의 섹션들을 `.content-grid > .main-column + aside.side-column`으로 묶음
-  - 왼쪽(main): 학급 안내사항 · 내 개인 공지 확인 · 제출/할 일 현황
+  - 왼쪽(main): 학급 안내사항 · 내 개인 공지 확인
   - 오른쪽(side): 고사 시간표 → 학급 시간표 → 학사일정 달력 순서로 세로로 쌓임
   - CSS는 기본이 세로 1단, `@media (min-width:940px)`에서만 2단(`minmax(0,1.4fr) minmax(380px,1fr)`)이고 `.app` 최대폭 480px → 1080px. 모바일 화면은 그대로
   - 컬럼 경계는 기존 `section + section`과 같은 `8px solid var(--gray-bg)`를 `.side-column`의 `border-left`로 재사용
 - 검증
   - 1280px: main 630px(x=92) / side 450px(x=722), 오른쪽 순서 중간고사 시간표 → 학급 시간표 → 학사일정 달력, 가로 스크롤 없음
   - 960px: 2단 유지(main 551 / side 394, 달력 316px), 900px: 1단 480px로 기존과 동일
-  - 375px: 1단, 순서 공지 → 개인 공지 → 할 일 → 중간고사 → 학급 시간표 → 학사일정, 가로 스크롤 없음
-  - 주의: 제출/할 일 현황이 왼쪽 열로 올라가면서 **모바일에서 달력 아래 → 개인 공지 아래**로 순서가 바뀜
+  - 375px: 1단, 순서 공지 → 개인 공지 → 중간고사 → 학급 시간표 → 학사일정, 가로 스크롤 없음
+    (제출/할 일 현황 제거로 기존 모바일 순서와 동일)
 
 ### 2026-09-14 — 2학기 중간고사 시간표(2학년) 학급 시간표 위 표시
 

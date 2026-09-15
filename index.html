@@ -200,7 +200,6 @@
     border-radius:5px;
     cursor:not-allowed;
   }
-  .task-item .checkbox-placeholder{margin-top:0;}
   .notice-body{flex:1; min-width:0;}
   .notice-card .ntitle{
     font-size:14px;
@@ -491,51 +490,6 @@
   .legend i.sat{color:#2b6cb0;}
   .legend i.sun{color:var(--danger);}
 
-  /* 제출 현황 */
-  .task-item{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:12px 0;
-    border-bottom:1px solid var(--border);
-  }
-  .task-item:last-child{border-bottom:none;}
-  .task-info{flex:1;}
-  .task-title{font-size:13.5px;font-weight:600;margin-bottom:3px;}
-  .task-due{font-size:11.5px;color:var(--text-sub);}
-  .status-pill{
-    font-size:11px;
-    font-weight:700;
-    padding:4px 9px;
-    border-radius:20px;
-    white-space:nowrap;
-  }
-  .status-pill.ongoing{background:#e8f6f4;color:var(--success);}
-  .status-pill.soon{background:#fff4e6;color:var(--warning);}
-  .status-pill.closed{background:#f1f1f4;color:#9297a8;}
-  .status-pill.done{background:#e8f6f4;color:var(--success);}
-  .status-pill.overdue{background:#ffe3e5;color:var(--danger);}
-
-  .task-item.overdue{
-    background:#fff7f7;
-    border-radius:10px;
-    padding-left:8px;
-    padding-right:8px;
-    margin:2px 0;
-  }
-  .task-item.overdue .task-title{color:var(--danger); font-weight:700;}
-
-  .task-checkbox{
-    width:20px;
-    height:20px;
-    flex-shrink:0;
-    cursor:pointer;
-    accent-color:var(--primary);
-  }
-  .task-item.done .task-title{
-    text-decoration:line-through;
-    color:var(--text-sub);
-  }
   .section-sub{
     font-size:11.5px;
     color:var(--text-sub);
@@ -581,12 +535,6 @@
   <section>
     <div class="section-title">🔑 내 개인 공지 확인하기</div>
     <div class="identity-box" id="identityBox"></div>
-  </section>
-
-  <section>
-    <div class="section-title">✅ 제출 / 할 일 현황</div>
-    <div class="section-sub" id="taskSub"></div>
-    <div id="taskList"></div>
   </section>
 
    </div><!-- /main-column -->
@@ -677,7 +625,6 @@ const SHEET_API = window.CLASS_NOTICE_CONFIG.apiUrl;
 
 /* 공지/할일은 서버에서 받아온다(정적 data.js가 아님). */
 let notices = [];
-let tasks = [];
 
 /* 개인 코드는 반드시 두 자리 번호 + 휴대폰 뒤 4자리의 정확한 6자리다. */
 function normalizeCode(raw){
@@ -693,7 +640,6 @@ async function loadData(code){
   const d = await r.json();
   if(!d || !d.ok) throw new Error('데이터 형식 오류');
   notices = Array.isArray(d.notices) ? d.notices : [];
-  tasks   = Array.isArray(d.tasks)   ? d.tasks   : [];
   currentStudent = d.student ? { id: d.student.num, name: d.student.name } : null;
   return d;
 }
@@ -702,8 +648,6 @@ async function loadData(code){
 function showConnError(){
   const nl = document.getElementById('noticeList');
   if(nl) nl.innerHTML = '<div class="empty-state">⚠️ 안내를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침 해주세요.</div>';
-  const tl = document.getElementById('taskList');
-  if(tl) tl.innerHTML = '<div class="empty-state">⚠️ 할 일을 불러오지 못했어요. 새로고침 해주세요.</div>';
 }
 
 async function submitCode(){
@@ -766,7 +710,6 @@ function renderAll(){
   renderClassTimetable();
   renderNotices();
   renderCalendar();
-  renderTasks();
 }
 
 /* ===================== 공지사항 ===================== */
@@ -943,50 +886,6 @@ function toggleArchive(){
   }
 }
 
-/* ===================== 제출 / 할 일 ===================== */
-function tasksForStudent(){
-  return tasks
-    .filter(t => t.audience==='all' || (currentStudent && t.audience===currentStudent.id))
-    .sort((a,b)=> a.dueDate.localeCompare(b.dueDate));
-}
-
-function taskStatus(dueDate){
-  const today = todayStr();
-  const diffDays = Math.ceil((new Date(dueDate) - new Date(today)) / 86400000);
-  if(diffDays < 0) return {cls:'closed', label:'마감됨'};
-  if(diffDays <= 1) return {cls:'soon', label: diffDays===0 ? '오늘 마감' : 'D-1'};
-  if(diffDays <= 3) return {cls:'soon', label:`D-${diffDays}`};
-  return {cls:'ongoing', label:`D-${diffDays}`};
-}
-
-/* 학생이 직접 체크한 완료 여부 - 이 브라우저에만 저장됨 */
-const DONE_KEY = 'classNoticeApp_taskDone';
-function loadDoneMap(){
-  try{ return JSON.parse(localStorage.getItem(DONE_KEY)) || {}; }
-  catch(e){ return {}; }
-}
-function saveDoneMap(map){
-  localStorage.setItem(DONE_KEY, JSON.stringify(map));
-}
-function isTaskDone(studentId, taskId){
-  const map = loadDoneMap();
-  return !!(map[studentId] && map[studentId][taskId]);
-}
-function toggleTaskDone(studentId, taskId){
-  const map = loadDoneMap();
-  if(!map[studentId]) map[studentId] = {};
-  const newState = !map[studentId][taskId];
-  map[studentId][taskId] = newState;
-  saveDoneMap(map);
-  renderTasks();
-
-  const student = currentStudent;
-  const task = tasks.find(t => t.id === taskId);
-  if(student && task){
-    submitResponse('할일', task.id, newState ? '완료' : '취소');
-  }
-}
-
 /* 확인/완료 응답은 같은 Apps Script의 앱_학생응답 시트에 기록한다. */
 function submitResponse(itemType, itemId, response){
   const code = localStorage.getItem(MYCODE_KEY) || '';
@@ -996,41 +895,6 @@ function submitResponse(itemType, itemId, response){
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body:JSON.stringify({action:'recordResponse', code, itemType, itemId, response})
   }).catch(()=>{});
-}
-
-function renderTasks(){
-  const list = tasksForStudent();
-  const identified = !!currentStudent;
-  const sub = document.getElementById('taskSub');
-  sub.textContent = identified
-    ? '체크하면 선생님 기록에도 자동으로 남아요. 단, 화면 표시(체크 상태)는 이 기기에서만 유지돼요.'
-    : '개인 코드를 입력하면 직접 체크할 수 있어요.';
-
-  const el = document.getElementById('taskList');
-  if(list.length===0){
-    el.innerHTML = `<div class="empty-state">등록된 할 일이 없어요</div>`;
-    return;
-  }
-  el.innerHTML = list.map(t=>{
-    const done = identified && isTaskDone(currentStudent.id, t.id);
-    const st = taskStatus(t.dueDate);
-    const overdueNotDone = !done && st.cls === 'closed';
-    const pillClass = done ? 'done' : (overdueNotDone ? 'overdue' : st.cls);
-    const pillLabel = done ? '완료' : (overdueNotDone ? '🚨 마감(미제출)' : st.label);
-    const checkboxHtml = identified
-      ? `<input type="checkbox" class="task-checkbox" ${done?'checked':''} onchange='toggleTaskDone(${JSON.stringify(currentStudent.id)}, ${JSON.stringify(t.id)})'>`
-      : `<span class="checkbox-placeholder" title="개인 코드 입력 후 체크 가능">✓</span>`;
-    return `
-      <div class="task-item ${done?'done':''} ${overdueNotDone?'overdue':''}">
-        ${checkboxHtml}
-        <div class="task-info">
-          <div class="task-title">${overdueNotDone?'🚨 ':''}${escapeHtml(t.title)}</div>
-          <div class="task-due">제출기한 ${escapeHtml(t.dueDate)}</div>
-        </div>
-        <div class="status-pill ${pillClass}">${pillLabel}</div>
-      </div>
-    `;
-  }).join('');
 }
 
 /* ===================== 달력 ===================== */
@@ -1231,7 +1095,6 @@ async function init(){
     renderIdentityBox();
     renderClassTimetable();
     renderNotices();
-    renderTasks();
   }catch(e){
     currentStudent = null;
     renderIdentityBox();
