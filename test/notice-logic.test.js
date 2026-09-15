@@ -25,11 +25,41 @@ test('returns one current list and a separate past list', () => {
   assert.deepEqual(result.past.map((notice) => notice.id), ['past']);
 });
 
-test('uses the manager order before urgency and dates', () => {
+test('puts urgent notices first, then sorts by notice date newest first', () => {
   const result = splitNotices([
-    { id: 'normal-class', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 30 },
-    { id: 'arrival', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 10 },
-    { id: 'opening-cleanup', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 20, urgent: true },
+    { id: 'older', date: '2026-08-16', endsAt: '2026-08-20' },
+    { id: 'newest', date: '2026-08-18', endsAt: '2026-08-20' },
+    { id: 'urgent-older', date: '2026-08-15', endsAt: '2026-08-20', urgent: true },
+    { id: 'middle', date: '2026-08-17', endsAt: '2026-08-20' },
   ], '2026-08-16');
-  assert.deepEqual(result.current.map((notice) => notice.id), ['arrival', 'opening-cleanup', 'normal-class']);
+  assert.deepEqual(result.current.map((notice) => notice.id), ['urgent-older', 'newest', 'middle', 'older']);
+});
+
+test('uses the manager order only to break a tie on the same notice date', () => {
+  const result = splitNotices([
+    { id: 'same-day-last', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 30 },
+    { id: 'same-day-first', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 10 },
+    { id: 'newer-day', date: '2026-08-19', endsAt: '2026-08-19', sortOrder: 99 },
+  ], '2026-08-16');
+  assert.deepEqual(
+    result.current.map((notice) => notice.id),
+    ['newer-day', 'same-day-first', 'same-day-last'],
+  );
+});
+
+test('sorts the archive newest first too', () => {
+  const result = splitNotices([
+    { id: 'old', date: '2026-08-10', endsAt: '2026-08-11' },
+    { id: 'recent', date: '2026-08-14', endsAt: '2026-08-15' },
+    { id: 'middle', date: '2026-08-12', endsAt: '2026-08-13' },
+  ], '2026-08-16');
+  assert.deepEqual(result.past.map((notice) => notice.id), ['recent', 'middle', 'old']);
+});
+
+test('falls back to the end date when a notice has no notice date', () => {
+  const result = splitNotices([
+    { id: 'no-date', endsAt: '2026-08-20' },
+    { id: 'dated', date: '2026-08-17', endsAt: '2026-08-17' },
+  ], '2026-08-16');
+  assert.deepEqual(result.current.map((notice) => notice.id), ['no-date', 'dated']);
 });
