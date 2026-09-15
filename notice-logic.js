@@ -45,18 +45,29 @@
     return noticeDate(b).localeCompare(noticeDate(a));
   }
 
+  /* 종료일이 빠른(마감이 임박한) 공지가 위로. 종료일이 아예 없는 공지는
+     맨 아래로 보낸다(빈 문자열은 localeCompare에서 제일 앞으로 오기 때문). */
+  function compareEndingSoonFirst(a, b) {
+    const aEnd = noticeEndDate(a);
+    const bEnd = noticeEndDate(b);
+    if (!aEnd && !bEnd) return 0;
+    if (!aEnd) return 1;
+    if (!bEnd) return -1;
+    return aEnd.localeCompare(bEnd);
+  }
+
   function splitNotices(notices, today) {
     const current = [];
     const past = [];
     (Array.isArray(notices) ? notices : []).forEach((notice) => {
       (isPastNotice(notice, today) ? past : current).push(notice);
     });
-    /* 긴급 공지만 맨 위로 묶고, 그 안에서도 바깥에서도 안내일 최신순.
-       관리자 지정 sort_order는 같은 날짜끼리의 순서를 정할 때만 쓴다. */
+    /* 중요 공지를 맨 위로 묶고, 그 안에서도 바깥에서도 종료일이 빠른 순.
+       관리자 지정 sort_order는 종료일이 같을 때의 순서를 정할 때만 쓴다. */
     current.sort((a, b) => (urgentRank(b) - urgentRank(a))
-      || compareNewestFirst(a, b)
+      || compareEndingSoonFirst(a, b)
       || compareManagerOrder(a, b)
-      || noticeEndDate(a).localeCompare(noticeEndDate(b)));
+      || compareNewestFirst(a, b));
     past.sort((a, b) => compareNewestFirst(a, b)
       || compareManagerOrder(a, b)
       || noticeEndDate(b).localeCompare(noticeEndDate(a)));

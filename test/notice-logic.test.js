@@ -25,25 +25,36 @@ test('returns one current list and a separate past list', () => {
   assert.deepEqual(result.past.map((notice) => notice.id), ['past']);
 });
 
-test('puts urgent notices first, then sorts by notice date newest first', () => {
+test('puts urgent notices first, then sorts by end date soonest first', () => {
   const result = splitNotices([
-    { id: 'older', date: '2026-08-16', endsAt: '2026-08-20' },
-    { id: 'newest', date: '2026-08-18', endsAt: '2026-08-20' },
-    { id: 'urgent-older', date: '2026-08-15', endsAt: '2026-08-20', urgent: true },
-    { id: 'middle', date: '2026-08-17', endsAt: '2026-08-20' },
-  ], '2026-08-16');
-  assert.deepEqual(result.current.map((notice) => notice.id), ['urgent-older', 'newest', 'middle', 'older']);
-});
-
-test('uses the manager order only to break a tie on the same notice date', () => {
-  const result = splitNotices([
-    { id: 'same-day-last', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 30 },
-    { id: 'same-day-first', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 10 },
-    { id: 'newer-day', date: '2026-08-19', endsAt: '2026-08-19', sortOrder: 99 },
+    { id: 'latest-end', date: '2026-08-16', endsAt: '2026-08-25' },
+    { id: 'soonest-end', date: '2026-08-18', endsAt: '2026-08-18' },
+    { id: 'urgent-late-end', date: '2026-08-15', endsAt: '2026-08-30', urgent: true },
+    { id: 'middle-end', date: '2026-08-17', endsAt: '2026-08-20' },
   ], '2026-08-16');
   assert.deepEqual(
     result.current.map((notice) => notice.id),
-    ['newer-day', 'same-day-first', 'same-day-last'],
+    ['urgent-late-end', 'soonest-end', 'middle-end', 'latest-end'],
+  );
+});
+
+test('sends a notice with no date at all to the bottom of the current list', () => {
+  const result = splitNotices([
+    { id: 'no-date-at-all' },
+    { id: 'dated', date: '2026-08-17', endsAt: '2026-08-25' },
+  ], '2026-08-16');
+  assert.deepEqual(result.current.map((notice) => notice.id), ['dated', 'no-date-at-all']);
+});
+
+test('uses the manager order only to break a tie on the same end date', () => {
+  const result = splitNotices([
+    { id: 'same-day-last', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 30 },
+    { id: 'same-day-first', date: '2026-08-18', endsAt: '2026-08-18', sortOrder: 10 },
+    { id: 'earlier-end', date: '2026-08-16', endsAt: '2026-08-17', sortOrder: 99 },
+  ], '2026-08-16');
+  assert.deepEqual(
+    result.current.map((notice) => notice.id),
+    ['earlier-end', 'same-day-first', 'same-day-last'],
   );
 });
 
@@ -61,5 +72,5 @@ test('falls back to the end date when a notice has no notice date', () => {
     { id: 'no-date', endsAt: '2026-08-20' },
     { id: 'dated', date: '2026-08-17', endsAt: '2026-08-17' },
   ], '2026-08-16');
-  assert.deepEqual(result.current.map((notice) => notice.id), ['no-date', 'dated']);
+  assert.deepEqual(result.current.map((notice) => notice.id), ['dated', 'no-date']);
 });

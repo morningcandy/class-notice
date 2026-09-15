@@ -79,15 +79,45 @@
     .content-grid{
       display:grid;
       grid-template-columns:minmax(0,1.4fr) minmax(380px,1fr);
-      align-items:stretch;
+      align-items:start;
     }
     .side-column{
       border-top:none;
       border-left:8px solid var(--gray-bg);
+      /* 화면을 내려도 시간표·달력·학습링크가 따라온다.
+         내용이 화면보다 길면 이 칸 안에서만 스크롤된다. */
+      position:sticky;
+      top:var(--header-h,76px);          /* 고정 헤더 아래에 붙인다 */
+      align-self:start;
+      max-height:calc(100vh - var(--header-h,76px));
+      overflow-y:auto;
+      overscroll-behavior:contain;
     }
+    .side-column::-webkit-scrollbar{width:8px;}
+    .side-column::-webkit-scrollbar-thumb{background:var(--gray-bg);border-radius:8px;}
     .side-column > section:first-child{border-top:none;}
 
   }
+  /* 학습링크: 학생이 바로 들어갈 수 있는 학습 앱 모음 */
+  .link-list{display:flex;flex-direction:column;gap:8px;}
+  .link-card{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    text-decoration:none;
+    color:inherit;
+    background:#fff;
+  }
+  .link-card:hover{border-color:var(--primary);background:var(--gray-bg);}
+  .link-card .link-emoji{font-size:20px;line-height:1;}
+  .link-card .link-text{min-width:0;}
+  .link-card .link-name{display:block;font-size:14px;font-weight:700;}
+  .link-card .link-desc{display:block;font-size:12px;color:var(--text-sub);margin-top:2px;}
+  .link-card .link-arrow{margin-left:auto;color:var(--text-sub);font-size:14px;}
+
   .section-title{
     font-size:15px;
     font-weight:700;
@@ -629,15 +659,21 @@
     </div>
   </section>
 
+  <section>
+    <div class="section-title">🔗 학습링크</div>
+    <div class="section-sub">공부에 쓰는 앱을 바로 열 수 있어요.</div>
+    <div class="link-list" id="studyLinks"></div>
+  </section>
+
    </aside><!-- /side-column -->
   </div><!-- /content-grid -->
 
   <footer>매일 자동으로 마감 여부가 갱신됩니다</footer>
 </div>
 
-<script src="data.js?v=20260914-exam1"></script>
+<script src="data.js?v=20260916-links1"></script>
 <script src="config.js"></script>
-<script src="notice-logic.js?v=20260915-newest1"></script>
+<script src="notice-logic.js?v=20260916-endsoon1"></script>
 <script src="notice-content.js?v=20260817-tt2"></script>
 <script src="student-code.js?v=20260816-code1"></script>
 <script>
@@ -783,6 +819,27 @@ function renderClassTimetable(){
     holder.innerHTML = '';
     section.style.display = 'none';
   }
+}
+
+/* 학사일정 달력 아래 학습링크. 목록은 data.js의 studyLinks에서 읽는다.
+   외부 앱이라 새 탭으로 열고, 링크에서 이 사이트를 만지지 못하게 막는다. */
+function renderStudyLinks(){
+  const holder = document.getElementById('studyLinks');
+  if(!holder) return;
+  const links = (typeof studyLinks !== 'undefined' && Array.isArray(studyLinks)) ? studyLinks : [];
+  if(!links.length){
+    holder.innerHTML = '<div class="empty-state">아직 등록된 학습링크가 없어요</div>';
+    return;
+  }
+  holder.innerHTML = links.map((link) => `
+    <a class="link-card" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
+      <span class="link-emoji" aria-hidden="true">${escapeHtml(link.emoji || '🔗')}</span>
+      <span class="link-text">
+        <span class="link-name">${escapeHtml(link.name || '')}</span>
+        ${link.desc ? `<span class="link-desc">${escapeHtml(link.desc)}</span>` : ''}
+      </span>
+      <span class="link-arrow" aria-hidden="true">›</span>
+    </a>`).join('');
 }
 
 /* 학급 시간표 위에 표시되는 고사 시간표. data.js의 examSchedules에서 2학년 열만 쓴다.
@@ -1128,6 +1185,18 @@ function renderCalendar(){
   document.getElementById('calGrid').innerHTML = html;
 }
 
+/* 헤더가 sticky라, 같이 고정되는 오른쪽 칸의 top을 헤더 높이에 맞춰 둔다.
+   글씨 크기·화면 폭에 따라 헤더가 두 줄이 되기도 해서 실제 높이를 재서 쓴다. */
+function trackHeaderHeight(){
+  const header = document.querySelector('header');
+  if(!header) return;
+  const apply = () => document.documentElement.style
+    .setProperty('--header-h', `${Math.round(header.getBoundingClientRect().height)}px`);
+  apply();
+  if(typeof ResizeObserver !== 'undefined') new ResizeObserver(apply).observe(header);
+  else window.addEventListener('resize', apply);
+}
+
 /* ===================== 시작 ===================== */
 async function init(){
   const now = new Date();
@@ -1135,6 +1204,8 @@ async function init(){
     `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 기준 안내`;
   renderCalendar();      // 달력은 정적 data.js라 항상 표시
   renderExamSchedule();  // 고사 시간표도 정적 data.js라 네트워크와 무관하게 표시
+  renderStudyLinks();    // 학습링크도 정적 data.js
+  trackHeaderHeight();   // 고정된 오른쪽 칸이 헤더에 가리지 않도록
   renderIdentityBox();   // 로그인 입력창을 즉시 표시(네트워크 대기 전)
   const savedCode = localStorage.getItem(MYCODE_KEY) || '';
   try{

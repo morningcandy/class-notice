@@ -109,3 +109,15 @@ const examSchedules = [
     ],
   },
 ];
+
+/* 학습링크 — 학사일정 달력 아래에 카드로 표시됩니다.
+   링크를 추가할 때는 아래 배열에 한 줄 더 넣기만 하면 됩니다.
+   name: 카드 제목 / desc: 한 줄 설명 / url: 주소 / emoji: 앞 아이콘(생략 가능) */
+const studyLinks = [
+  {
+    name: '글맛대첩 연습',
+    desc: '어휘력 연습하기',
+    url: 'https://practiceword-2.vercel.app/',
+    emoji: '✍️',
+  },
+];
