@@ -155,6 +155,7 @@ OpenAI API 키가 설정되면 Responses API의 JSON Schema 출력으로 일정�
   - **버그 수정**: 긴급 비교가 `Number(b.urgent) - Number(a.urgent)`였는데 `urgent`가 없는 공지에서 `Number(undefined)=NaN`이 되어 비교가 통째로 무력화되고 있었음. `urgentRank()`로 불리언 처리
   - `index.html`: 940px 이상에서만 적용되는 글씨 확대 블록 추가(공지 제목 14→21px, 본문 13→19px, 섹션 제목 15→22px, 고사표 11.5→15.5px, 달력 날짜 12.5→17px 등). **스타일시트 맨 끝**에 둬야 기본 규칙을 이긴다(같은 특이도는 나중 규칙 우선 — 처음엔 앞에 뒀다가 안 먹었음)
   - 인라인 `style="font-size:12px"`이던 달력 안내문·개인코드 안내를 `.cal-note`·`.identity-hint` 클래스로 빼서 확대 대상에 포함
+  - `notice-logic.js` 캐시 버스터를 `?v=20260816-order1` → `?v=20260915-newest1`로 올림. **안 올리면 이미 방문한 학생 브라우저가 옛 정렬 파일을 계속 쓴다**(실제로 배포 직후 옛 순서가 나왔음)
 - 검증
   - `node --test test/*.test.js` 12건 통과(최신순·동점 tie-break·지난 공지·안내일 누락 대체 케이스 추가)
   - 1280px 실측: 긴급(화법과 언어) 맨 위 → 9/23 → 9/17 → 9/15(약물→결핵, sortOrder tie-break) → 9/14…, 글씨 22/21/19/15px 적용, 가로 스크롤 없음
