@@ -16,7 +16,7 @@
     dialog: $('#noticeDialog'), form: $('#noticeForm'), dialogTitle: $('#dialogTitle'),
     noticeId: $('#noticeId'), scope: $('#scopeInput'), type: $('#typeInput'),
     studentField: $('#studentField'), studentChoices: $('#studentChoices'), title: $('#titleInput'),
-    content: $('#contentInput'), noticeDate: $('#noticeDateInput'), dueDate: $('#dueDateInput'),
+    content: $('#contentInput'), noticeDate: $('#noticeDateInput'), dueDate: $('#dueDateInput'), startsAt: $('#startsAtInput'),
     urgent: $('#urgentInput'), formError: $('#formError'), closeDialog: $('#closeDialogBtn'),
     cancelDialog: $('#cancelDialogBtn'), saveNotice: $('#saveNoticeBtn'), toast: $('#toast'),
     studentSetupBanner: $('#studentSetupBanner'), studentSetupText: $('#studentSetupText'), studentSheetLink: $('#studentSheetLink'),
@@ -27,6 +27,14 @@
   })[char]);
   const truthy = (value) => value === true || String(value).toUpperCase() === 'TRUE';
   const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  /* 예약 시각은 서버와 같은 한국 시간 "yyyy-MM-dd HH:mm" 문자열로 비교한다. */
+  const nowMinute = () => new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 16).replace('T', ' ');
+  const startsAtOf = (notice) => String(notice?.starts_at || '').trim().replace('T', ' ');
+  const isScheduled = (notice) => !!startsAtOf(notice) && startsAtOf(notice) > nowMinute();
+  const startsAtLabel = (value) => {
+    const match = String(value).match(/^\d{4}-(\d{2})-(\d{2}) (\d{2}:\d{2})/);
+    return match ? `${Number(match[1])}/${Number(match[2])} ${match[3]}` : value;
+  };
 
   async function api(action, payload = {}) {
     const response = await fetch(API_URL, {
@@ -126,21 +134,24 @@
     const individual = notice.scope === '학생개별';
     const targets = individual ? targetLabels(notice.target_student_ids) : '학급 전체';
     const urgent = truthy(notice.urgent);
+    const scheduled = isScheduled(notice);
+    const statusLabel = notice.status === '게시됨' && scheduled ? '예약됨' : (notice.status || '검토대기');
     return `<article class="notice-card" data-id="${esc(notice.notice_id)}" data-status="${esc(notice.status)}">
       <div>
         <div class="notice-meta">
-          <span class="badge status">${esc(notice.status || '검토대기')}</span>
+          <span class="badge status">${esc(statusLabel)}</span>
+          ${scheduled ? `<span class="badge scheduled">${esc(startsAtLabel(startsAtOf(notice)))} 공개</span>` : ''}
           <span class="badge">${esc(notice.notice_type || '공지')}</span>
           <span class="badge">${esc(targets)}</span>
           ${urgent ? '<span class="badge urgent">긴급</span>' : ''}
         </div>
         <h3>${esc(notice.title || '(제목 없음)')}</h3>
         <p class="content">${esc(notice.content || '')}</p>
-        <p class="date-line">안내일 ${esc(notice.notice_date || '-')} ${notice.due_date ? ` · 마감 ${esc(notice.due_date)}` : ''}</p>
+        <p class="date-line">안내일 ${esc(notice.notice_date || '-')} ${notice.due_date ? ` · 마감 ${esc(notice.due_date)}` : ''}${startsAtOf(notice) ? ` · 공개 시작 ${esc(startsAtOf(notice))}` : ''}</p>
       </div>
       <div class="card-actions">
         <button class="edit" data-action="edit" type="button">수정</button>
-        ${notice.status !== '게시됨' ? '<button class="publish" data-action="게시됨" type="button">게시하기</button>' : ''}
+        ${notice.status !== '게시됨' ? `<button class="publish" data-action="게시됨" type="button">${scheduled ? '예약 게시' : '게시하기'}</button>` : ''}
         ${notice.status !== '검토대기' ? '<button class="ghost" data-action="검토대기" type="button">검토로</button>' : ''}
         ${notice.status !== '보류' ? '<button class="hold" data-action="보류" type="button">보류</button>' : ''}
         ${notice.status !== '종료됨' ? '<button class="end" data-action="종료됨" type="button">종료</button>' : ''}
@@ -166,6 +177,7 @@
     ui.content.value = notice?.content || '';
     ui.noticeDate.value = notice?.notice_date || today();
     ui.dueDate.value = notice?.due_date || '';
+    ui.startsAt.value = startsAtOf(notice).replace(' ', 'T');
     ui.urgent.checked = truthy(notice?.urgent);
     renderStudents(String(notice?.target_student_ids || '').split(',').filter(Boolean));
     toggleStudentField();
@@ -187,6 +199,7 @@
       content: ui.content.value.trim(),
       notice_date: ui.noticeDate.value,
       due_date: ui.dueDate.value,
+      starts_at: ui.startsAt.value ? ui.startsAt.value.replace('T', ' ') : '',
       urgent: ui.urgent.checked,
     };
   }
@@ -210,13 +223,20 @@
   }
 
   async function changeStatus(noticeId, status, button) {
-    const messages = { '게시됨': '학생 화면에 이 공지를 게시할까요?', '종료됨': '이 공지를 종료할까요?' };
+    const notice = state.notices.find((item) => String(item.notice_id) === String(noticeId));
+    const scheduled = status === '게시됨' && isScheduled(notice);
+    const messages = {
+      '게시됨': scheduled ? `${startsAtLabel(startsAtOf(notice))}부터 학생 화면에 공개되도록 예약할까요?` : '학생 화면에 이 공지를 게시할까요?',
+      '종료됨': '이 공지를 종료할까요?',
+    };
     if (messages[status] && !window.confirm(messages[status])) return;
     setBusy(button, true);
     try {
       await api('setNoticeStatus', { noticeId, status });
       await reload();
-      showToast(status === '게시됨' ? '학생 화면에 게시했습니다.' : `상태를 ${status}(으)로 변경했습니다.`);
+      showToast(status === '게시됨'
+        ? (scheduled ? `${startsAtLabel(startsAtOf(notice))}에 공개되도록 예약했습니다.` : '학생 화면에 게시했습니다.')
+        : `상태를 ${status}(으)로 변경했습니다.`);
     } catch (error) {
       showToast(error.message, true);
     } finally {

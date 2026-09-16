@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#4338ca">
   <title>학급 알림장 관리자</title>
   <link rel="icon" href="../snack_icon_full.png">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="admin.css?v=20260917-schedule">
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -126,6 +126,10 @@
           <input id="dueDateInput" type="date">
         </label>
       </div>
+      <label>게시 예약 (선택)
+        <input id="startsAtInput" type="datetime-local" step="60">
+        <span class="field-hint">비워두면 게시하는 즉시 공개됩니다. 시각을 넣고 ‘게시하기’를 누르면 그 시각부터 학생 화면에 나타납니다.</span>
+      </label>
       <label class="check-line">
         <input id="urgentInput" type="checkbox">
         <span>긴급 표시</span>
@@ -140,6 +144,6 @@
   </dialog>
 
   <script src="../config.js"></script>
-  <script src="admin.js"></script>
+  <script src="admin.js?v=20260917-schedule"></script>
 </body>
 </html>
