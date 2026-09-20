@@ -120,4 +120,10 @@ const studyLinks = [
     url: 'https://practiceword-2.vercel.app/',
     emoji: '✍️',
   },
+  {
+    name: '우리역사바로알기프로젝트(배타ver.)',
+    desc: '한국사 기출 문제 풀기',
+    url: 'https://history-app-tau.vercel.app/',
+    emoji: '📜',
+  },
 ];
