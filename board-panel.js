@@ -32,6 +32,17 @@
     .call-dock-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
       font-size: 12px; font-weight: 800; letter-spacing: .08em; color: #9a3412; }
     .call-dock.alert .call-dock-head b { font-size: clamp(15px, 2vw, 20px); letter-spacing: 0; }
+    .call-dock-bell { display: inline-block; font-size: 1.15em; }
+    .call-dock.alert .call-dock-bell { font-size: clamp(22px, 2.6vw, 34px); vertical-align: -4px;
+      animation: callDockShake 1.1s ease-in-out infinite; }
+    @keyframes callDockShake {
+      0%, 100% { transform: rotate(0deg); }
+      20% { transform: rotate(-13deg); }
+      40% { transform: rotate(11deg); }
+      60% { transform: rotate(-7deg); }
+      80% { transform: rotate(5deg); }
+    }
+    @media (prefers-reduced-motion: reduce) { .call-dock.alert .call-dock-bell { animation: none; } }
     .call-dock-state { color: #c2a894; font-size: 11px; font-weight: 700; }
     .call-dock.quiet .call-dock-state { color: #c3cad4; }
     .call-dock-list { display: grid; gap: 12px; margin-top: 12px; }
@@ -64,7 +75,7 @@
   if (!header) return;
   const dock = document.createElement('div');
   dock.className = 'call-dock quiet';
-  dock.innerHTML = '<div class="call-dock-head"><b>호출</b>'
+  dock.innerHTML = '<div class="call-dock-head"><b><span class="call-dock-bell">🔔</span> 호출</b>'
     + '<span class="call-dock-state" id="callDockState">확인 중</span></div>'
     + '<div class="call-dock-list" id="callDockList"></div>'
     + '<span class="call-dock-empty" id="callDockEmpty"></span>';
@@ -87,6 +98,9 @@
     const done = calls.done(state.calls);
     dock.classList.toggle('quiet', !waiting.length);
     dock.classList.toggle('alert', !!waiting.length);
+    /* 호출 중에는 종이 사이렌으로 바뀌고 흔들린다. */
+    const bell = dock.querySelector('.call-dock-bell');
+    if (bell) bell.textContent = waiting.length ? '🚨' : '🔔';
 
     list.innerHTML = waiting.map((call) => `
       <div class="call-dock-item">
@@ -100,7 +114,7 @@
       </div>
     `).join('');
 
-    empty.textContent = done.length ? `호출 없음 · 오늘 전달 완료 ${done.length}건` : '호출 없음';
+    empty.textContent = done.length ? `🔔 호출 없음 · 오늘 전달 완료 ${done.length}건` : '🔔 호출 없음';
 
     [...list.querySelectorAll('button[data-call]')].forEach((button) => {
       button.addEventListener('click', async () => {
