@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <title>2학년 3반 교실 화면</title>
+  <link rel="icon" href="../snack_icon_full.png">
+  <link rel="stylesheet" href="board.css?v=20260923-board1">
+</head>
+<body>
+  <main id="setupView" class="setup-shell">
+    <section class="setup-card">
+      <p class="eyebrow">2학년 3반</p>
+      <h1>교실 호출 화면</h1>
+      <p class="muted">교실 컴퓨터에서 한 번만 설정하면 다음부터는 바로 열립니다.</p>
+      <form id="setupForm" class="setup-form">
+        <label for="keyInput">교실 화면 코드
+          <input id="keyInput" type="password" autocomplete="off" required autofocus>
+        </label>
+        <button class="primary full" type="submit">화면 시작</button>
+      </form>
+      <p id="setupError" class="form-error" role="alert"></p>
+      <p class="hint">시작 버튼을 눌러야 알림음이 납니다. 아침에 컴퓨터를 켜면 이 버튼을 한 번 눌러주세요.</p>
+      <a class="text-link" href="../">학급 알림장으로 가기</a>
+    </section>
+  </main>
+
+  <div id="boardView" class="board hidden">
+    <header class="board-top">
+      <div>
+        <p class="eyebrow">2학년 3반</p>
+        <h1>호출</h1>
+      </div>
+      <div class="board-meta">
+        <span id="clock" class="clock">--:--</span>
+        <span id="status" class="status">연결 확인 중</span>
+        <button id="notifyBtn" class="ghost hidden" type="button">알림 켜기</button>
+      </div>
+    </header>
+
+    <section id="callList" class="call-list" aria-live="polite" aria-label="호출 목록"></section>
+
+    <section id="emptyState" class="empty">
+      <p class="empty-mark">호출 없음</p>
+      <p class="muted">선생님이 부르시면 이 화면에 크게 뜹니다.</p>
+    </section>
+
+    <footer class="board-foot">
+      <span id="doneList" class="done-list"></span>
+    </footer>
+  </div>
+
+  <script src="../config.js?v=20260923-board1"></script>
+  <script src="board.js?v=20260923-board1"></script>
+</body>
+</html>
