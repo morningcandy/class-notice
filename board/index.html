@@ -6,22 +6,32 @@
   <meta name="theme-color" content="#0f172a">
   <title>2학년 3반 교실 화면</title>
   <link rel="icon" href="../snack_icon_full.png">
-  <link rel="stylesheet" href="board.css?v=20260923-board1">
+  <link rel="stylesheet" href="board.css?v=20260928-connect1">
 </head>
 <body>
   <main id="setupView" class="setup-shell">
     <section class="setup-card">
       <p class="eyebrow">2학년 3반</p>
-      <h1>교실 호출 화면</h1>
-      <p class="muted">교실 컴퓨터에서 한 번만 설정하면 다음부터는 바로 열립니다.</p>
+      <h1>호출 연결</h1>
+      <p class="muted">호출키를 한 번 넣으면 이 컴퓨터의 학급 알림장 위쪽에 호출이 뜹니다.</p>
+
+      <!-- 이미 연결된 기기에서 다시 들어왔을 때 -->
+      <div id="connectedBox" class="connected-box hidden">
+        <p class="connected-mark">✅ 이 컴퓨터는 호출에 연결되어 있어요</p>
+        <a class="primary full button-link" href="../">학급 알림장으로 가기</a>
+        <button id="disconnectBtn" class="ghost full" type="button">연결 해제</button>
+      </div>
+
       <form id="setupForm" class="setup-form">
-        <label for="keyInput">교실 화면 코드
+        <label for="keyInput">호출키
           <input id="keyInput" type="password" autocomplete="off" required autofocus>
         </label>
-        <button class="primary full" type="submit">화면 시작</button>
+        <button class="primary full" type="submit">연결하고 학급 알림장으로</button>
+        <button id="boardOnlyBtn" class="ghost full" type="button">이 화면에서 크게 보기</button>
       </form>
       <p id="setupError" class="form-error" role="alert"></p>
-      <p class="hint">시작 버튼을 눌러야 알림음이 납니다. 아침에 컴퓨터를 켜면 이 버튼을 한 번 눌러주세요.</p>
+      <p class="hint">학급 알림장으로 돌아가면 화면 위쪽에 "호출 연결됨"이 보입니다.
+        알림음은 알림장에서 <b>🔊 알림음 켜기</b>를 한 번 눌러야 납니다.</p>
       <a class="text-link" href="../">학급 알림장으로 가기</a>
     </section>
   </main>
@@ -52,7 +62,7 @@
   </div>
 
   <script src="../config.js?v=20260923-board1"></script>
-  <script src="../call-feed.js?v=20260923-call1"></script>
-  <script src="board.js?v=20260923-board1"></script>
+  <script src="../call-feed.js?v=20260928-connect3"></script>
+  <script src="board.js?v=20260928-connect3"></script>
 </body>
 </html>

@@ -16,6 +16,7 @@
     setupError: $('#setupError'), boardView: $('#boardView'), callList: $('#callList'),
     emptyState: $('#emptyState'), status: $('#status'), clock: $('#clock'),
     doneList: $('#doneList'), notifyBtn: $('#notifyBtn'),
+    boardOnlyBtn: $('#boardOnlyBtn'), connectedBox: $('#connectedBox'), disconnectBtn: $('#disconnectBtn'),
   };
 
   function syncNotifyButton() {
@@ -92,7 +93,6 @@
 
   function start(key) {
     state.key = key;
-    calls.setKey(key);
     ui.setupView.classList.add('hidden');
     ui.boardView.classList.remove('hidden');
     syncNotifyButton();
@@ -103,22 +103,50 @@
     state.timer = setInterval(refresh, calls.POLL_MS);
   }
 
-  ui.setupForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
+  /* 호출키가 맞는지 서버에 물어보고, 이 기기에 실제로 저장됐는지까지 확인한다.
+     시크릿 창처럼 저장이 막힌 브라우저면 알림장으로 돌아가도 호출이 안 뜨므로 여기서 알린다. */
+  async function connect() {
     const key = ui.keyInput.value.trim();
-    if (!key) return;
-    ui.setupError.textContent = '';
-    state.key = key;
+    if (!key) { ui.keyInput.focus(); return ''; }
+    ui.setupError.className = 'form-error';
+    ui.setupError.textContent = '확인 중…';
     try {
       await calls.fetchCalls(API_URL, key);
     } catch (error) {
       ui.setupError.textContent = error.message;
-      return;
+      return '';
     }
-    /* 이 클릭이 소리와 알림 권한을 여는 유일한 기회다. */
+    if (!calls.setKey(key)) {
+      ui.setupError.textContent = '이 브라우저가 저장을 막고 있어 연결을 기억하지 못합니다. 시크릿 창·게스트 모드가 아닌 일반 창에서 다시 해주세요.';
+      return '';
+    }
+    ui.setupError.textContent = '';
+    /* 이 클릭이 소리와 알림 권한을 여는 기회다. */
     calls.beep();
     await calls.requestNotify();
-    start(key);
+    return key;
+  }
+
+  ui.setupForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!(await connect())) return;
+    ui.setupError.className = 'form-ok';
+    ui.setupError.textContent = '연결됐어요! 학급 알림장으로 돌아갑니다…';
+    calls.markJustConnected();
+    setTimeout(() => { location.href = '../'; }, 900);
+  });
+
+  ui.boardOnlyBtn.addEventListener('click', async () => {
+    const key = await connect();
+    if (key) start(key);
+  });
+
+  ui.disconnectBtn.addEventListener('click', () => {
+    calls.clearKey();
+    ui.keyInput.value = '';
+    ui.connectedBox.classList.add('hidden');
+    ui.setupError.className = 'form-ok';
+    ui.setupError.textContent = '연결을 해제했습니다. 이 컴퓨터에는 더 이상 호출이 뜨지 않습니다.';
   });
 
   ui.notifyBtn.addEventListener('click', async () => {
@@ -129,6 +157,6 @@
   const saved = calls.getKey();
   if (saved) {
     ui.keyInput.value = saved;
-    /* 저장된 코드가 있어도 시작 버튼은 누르게 둔다. 그 클릭이 있어야 알림음이 난다. */
+    ui.connectedBox.classList.remove('hidden');
   }
 })();

@@ -17,8 +17,37 @@
     try { return localStorage.getItem(KEY_STORE) || ''; } catch (error) { return ''; }
   }
 
+  /* 저장한 뒤 다시 읽어 확인한다. 저장이 막힌 브라우저면 false. */
   function setKey(key) {
-    try { localStorage.setItem(KEY_STORE, key); } catch (error) { /* 저장 못해도 이번 세션은 쓴다 */ }
+    try {
+      localStorage.setItem(KEY_STORE, key);
+      return localStorage.getItem(KEY_STORE) === key;
+    } catch (error) { return false; }
+  }
+
+  /* 연결 화면에서 막 넘어왔는지 표시. 알림장이 한 번 읽고 지운다. */
+  const JUST_STORE = 'classNotice.justConnected';
+  function markJustConnected() {
+    try { sessionStorage.setItem(JUST_STORE, '1'); } catch (error) { /* 표시만 못할 뿐 */ }
+  }
+  function takeJustConnected() {
+    try {
+      const value = sessionStorage.getItem(JUST_STORE) === '1';
+      sessionStorage.removeItem(JUST_STORE);
+      return value;
+    } catch (error) { return false; }
+  }
+
+  function clearKey() {
+    try { localStorage.removeItem(KEY_STORE); } catch (error) { /* 지울 게 없으면 그만 */ }
+  }
+
+  /* 브라우저가 클릭 없이도 소리를 허락했는지 본다(한 번 허락된 사이트는 바로 running). */
+  function soundAllowed() {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      return audio.state === 'running';
+    } catch (error) { return false; }
   }
 
   function esc(value) {
@@ -94,7 +123,7 @@
   const done = (calls) => calls.filter((call) => call.status === '전달완료');
 
   return {
-    KEY_STORE, POLL_MS, getKey, setKey, esc,
+    KEY_STORE, POLL_MS, getKey, setKey, clearKey, markJustConnected, takeJustConnected, soundAllowed, esc,
     fetchCalls, ack, beep, notify, requestNotify, sinceLabel, waiting, done,
   };
 }));
