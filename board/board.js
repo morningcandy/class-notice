@@ -121,30 +121,36 @@
       return '';
     }
     ui.setupError.textContent = '';
-    /* 이 클릭이 소리와 알림 권한을 여는 기회다. */
     calls.beep();
-    await calls.requestNotify();
     return key;
   }
 
   ui.setupForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!(await connect())) return;
+    /* 윈도우 알림 권한은 여기서 묻지 않는다. 권한 창에 답할 때까지 기다리느라
+       알림장으로 넘어가지 못하고 멈춘 적이 있다(교실 노트북). 알림장의
+       [알림음 켜기]에서 묻는다. */
+    ui.connectedBox.classList.remove('hidden');
+    ui.setupForm.classList.add('hidden');
     ui.setupError.className = 'form-ok';
-    ui.setupError.textContent = '연결됐어요! 학급 알림장으로 돌아갑니다…';
+    ui.setupError.textContent = '✅ 연결됐어요! 학급 알림장으로 이동합니다…';
     calls.markJustConnected();
     setTimeout(() => { location.href = '../'; }, 900);
   });
 
   ui.boardOnlyBtn.addEventListener('click', async () => {
     const key = await connect();
-    if (key) start(key);
+    if (!key) return;
+    calls.requestNotify(); // 답을 기다리지 않는다. 화면 위 [알림 켜기]로도 다시 물을 수 있다.
+    start(key);
   });
 
   ui.disconnectBtn.addEventListener('click', () => {
     calls.clearKey();
     ui.keyInput.value = '';
     ui.connectedBox.classList.add('hidden');
+    ui.setupForm.classList.remove('hidden');
     ui.setupError.className = 'form-ok';
     ui.setupError.textContent = '연결을 해제했습니다. 이 컴퓨터에는 더 이상 호출이 뜨지 않습니다.';
   });
