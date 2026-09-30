@@ -8,7 +8,7 @@
   const KEY_STORE = 'classNotice.lateKey.v1';
   const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 
-  const state = { key: '', date: '', feed: null, busy: new Set() };
+  const state = { key: '', date: '', feed: null };
   const $ = (selector) => document.querySelector(selector);
 
   const ui = {
@@ -92,7 +92,7 @@
     const lateByNumber = new Map(feed.lates.map((late) => [late.number, late]));
     ui.numberGrid.innerHTML = feed.numbers.map((number) => {
       const late = lateByNumber.get(number);
-      const cls = ['num', late ? (late.assigned ? 'locked' : 'on') : '', state.busy.has(number) ? 'busy' : ''].join(' ');
+      const cls = ['num', late ? (late.assigned ? 'locked' : 'on') : ''].join(' ');
       const title = late && late.assigned ? '분리수거 당번으로 정해져서 취소할 수 없어요' : '';
       return `<button class="${cls}" type="button" data-number="${number}" aria-pressed="${!!late}" title="${title}">${number}</button>`;
     }).join('');
@@ -130,23 +130,69 @@
       <button class="done-btn" type="button" data-duty="${esc(duty.id)}" data-done="1">완료</button></div>`;
   }
 
-  async function toggleLate(number) {
-    if (state.busy.has(number)) return;
-    const late = state.feed.lates.find((row) => row.number === number);
+  /* 누르는 즉시 색을 바꾸고 저장은 뒤에서 한다. 같은 번호를 연달아 누르면
+     마지막 상태만 보낸다. 다 저장되고 잠시 조용해지면 한 번만 새로 불러온다. */
+  const saving = new Map(); // "날짜|번호" → { want, sent, running }
+  let reloadTimer = 0;
+
+  function pendingCount() {
+    let count = 0;
+    saving.forEach((job) => { if (job.running || job.want !== job.sent) count += 1; });
+    return count;
+  }
+
+  function scheduleReload() {
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => {
+      if (pendingCount()) return;
+      refresh().catch((error) => setStatus(error.message, true));
+    }, 1500);
+  }
+
+  async function flush(jobKey, date, number) {
+    const job = saving.get(jobKey);
+    if (job.running) return;
+    job.running = true;
+    try {
+      while (job.want !== job.sent) {
+        const want = job.want;
+        await post({ action: 'setLate', date, number, late: want });
+        job.sent = want;
+      }
+    } catch (error) {
+      saving.delete(jobKey);
+      setStatus(error.message, true);
+      refresh().catch(() => {});
+      return;
+    } finally {
+      job.running = false;
+    }
+    saving.delete(jobKey);
+    if (!pendingCount()) {
+      setStatus(`저장됨 · ${new Date().toTimeString().slice(0, 5)}`);
+      scheduleReload();
+    }
+  }
+
+  function toggleLate(number) {
+    const feed = state.feed;
+    const late = feed.lates.find((row) => row.number === number);
     if (late && late.assigned) {
       setStatus('분리수거 당번으로 정해진 기록은 취소할 수 없어요. 선생님께 말씀드려 주세요.', true);
       return;
     }
-    state.busy.add(number);
+    const want = !late;
+    if (want) feed.lates.push({ id: '', number, assigned: false });
+    else feed.lates = feed.lates.filter((row) => row.number !== number);
     render();
-    try {
-      await post({ action: 'setLate', date: state.date, number, late: !late });
-    } catch (error) {
-      setStatus(error.message, true);
-    } finally {
-      state.busy.delete(number);
-    }
-    try { await refresh(); } catch (error) { setStatus(error.message, true); }
+
+    const jobKey = `${state.date}|${number}`;
+    const job = saving.get(jobKey) || { want: !want, sent: !want, running: false };
+    job.want = want;
+    saving.set(jobKey, job);
+    clearTimeout(reloadTimer);
+    setStatus('저장 중…');
+    flush(jobKey, state.date, number);
   }
 
   async function markDuty(dutyId, done, button) {
