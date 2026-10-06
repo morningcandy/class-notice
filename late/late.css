@@ -60,7 +60,8 @@ input:focus { border-color: var(--primary); }
 
 .duty-list { display: grid; gap: 8px; }
 .duty-week { padding: 12px; border-radius: 12px; background: var(--gray-bg); }
-.duty-week-head { margin-bottom: 8px; font-size: 13px; font-weight: 800; color: var(--text-sub); }
+.duty-week-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 13px; font-weight: 800; color: var(--text-sub); }
+.duty-week.planned { background: #fff; border: 1px dashed var(--border); }
 .duty { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
 .duty-num { min-width: 52px; font-size: 20px; font-weight: 900; }
 .duty-state { flex: 1; font-size: 13px; color: var(--text-sub); }
@@ -75,3 +76,12 @@ input:focus { border-color: var(--primary); }
 .queue .chip.carried { background: var(--danger-light); color: var(--danger); }
 
 .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; }
+
+.legend { margin: 0 0 10px; font-size: 12px; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.pill.plan { border: 1px dashed var(--text-sub); color: var(--text-sub); background: #fff; }
+.pill.duty-on { background: var(--primary-light); color: var(--primary); }
+.pill.ok { background: var(--success-light); color: var(--success); }
+.pill.miss { background: var(--danger-light); color: var(--danger); }
+.duty-list h3 { margin: 14px 0 6px; }
+.duty-list h3:first-child { margin-top: 0; }

@@ -16,7 +16,7 @@
     mainView: $('#mainView'), status: $('#status'), dateLabel: $('#dateLabel'),
     prevDay: $('#prevDay'), nextDay: $('#nextDay'), todayBtn: $('#todayBtn'),
     numberGrid: $('#numberGrid'), daySummary: $('#daySummary'),
-    perWeek: $('#perWeek'), dutyList: $('#dutyList'), queueList: $('#queueList'), forgetBtn: $('#forgetBtn'),
+    perWeek: $('#perWeek'), dutyList: $('#dutyList'), forgetBtn: $('#forgetBtn'),
   };
 
   function getKey() {
@@ -101,32 +101,62 @@
       ? `이날 지각 ${checked.length}명: ${checked.map((n) => `${n}번`).join(', ')}`
       : '이날 지각 없음';
 
-    const weeks = [...new Set(feed.duties.map((duty) => duty.date))].sort().reverse();
-    ui.dutyList.innerHTML = weeks.length ? weeks.map((date) => {
-      const rows = feed.duties.filter((duty) => duty.date === date);
-      return `<div class="duty-week">
-        <div class="duty-week-head">${esc(dateText(date))}</div>
-        ${rows.map(dutyHtml).join('')}
-      </div>`;
-    }).join('') : '<p class="empty">아직 정해진 당번이 없어요.</p>';
+    renderDuties(feed);
+  }
 
-    ui.queueList.innerHTML = feed.queue.length
-      ? feed.queue.map((item) => `<span class="chip${item.carried ? ' carried' : ''}">${item.number}번${item.carried ? ' (지난주 못 함)' : ''}</span>`).join('')
-      : '<span class="empty">대기 중인 지각 기록이 없어요. 지각자가 없으면 원래 담당이 해요.</span>';
+  /* 목요일별 카드. 앞으로 올 목요일(정해진 당번 + 예정)을 가까운 순으로, 지난 목요일은 최근 순으로. */
+  function renderDuties(feed) {
+    const byDate = new Map();
+    const slot = (date) => {
+      if (!byDate.has(date)) byDate.set(date, { duties: [], planned: [] });
+      return byDate.get(date);
+    };
+    feed.duties.forEach((duty) => slot(duty.date).duties.push(duty));
+    (feed.schedule || []).forEach((week) => { slot(week.date).planned = week.numbers; });
+
+    const dates = [...byDate.keys()];
+    const upcoming = dates.filter((date) => date >= feed.today).sort();
+    const past = dates.filter((date) => date < feed.today).sort().reverse();
+    const card = (date) => {
+      const { duties, planned } = byDate.get(date);
+      const counts = { done: duties.filter((d) => d.status === '완료').length, all: duties.length };
+      const head = duties.length
+        ? `${counts.done}/${counts.all} 완료`
+        : '예정 · 수요일 아침에 확정';
+      return `<div class="duty-week${duties.length ? '' : ' planned'}">
+        <div class="duty-week-head"><span>${esc(dateText(date))}</span><span>${esc(head)}</span></div>
+        ${duties.map(dutyHtml).join('')}
+        ${duties.length ? '' : planned.map(plannedHtml).join('')}
+      </div>`;
+    };
+
+    const parts = [];
+    if (upcoming.length) parts.push('<h3>다가오는 목요일</h3>', upcoming.map(card).join(''));
+    else parts.push('<p class="empty">예정된 당번이 없어요. 지각자가 없으면 기존 담당이 해요.</p>');
+    if (past.length) parts.push('<h3>지난 목요일</h3>', past.map(card).join(''));
+    ui.dutyList.innerHTML = parts.join('');
+  }
+
+  function plannedHtml(item) {
+    return `<div class="duty"><span class="duty-num">${item.number}번</span>
+      <span class="pill plan">예정</span>
+      <span class="duty-state">${item.carried ? '지난주 못 해서 먼저' : ''}</span></div>`;
   }
 
   function dutyHtml(duty) {
     if (duty.status === '완료') {
       return `<div class="duty done"><span class="duty-num">${duty.number}번</span>
-        <span class="duty-state">완료 ✓</span>
+        <span class="pill ok">완료 ✓</span><span class="duty-state"></span>
         <button class="undo-btn" type="button" data-duty="${esc(duty.id)}" data-done="0">완료 취소</button></div>`;
     }
     if (duty.status === '미완료') {
       return `<div class="duty missed"><span class="duty-num">${duty.number}번</span>
-        <span class="duty-state">못 해서 다음 주로 넘어감</span></div>`;
+        <span class="pill miss">못 함</span><span class="duty-state">다음 주로 넘어감</span></div>`;
     }
+    const late = duty.date < state.feed.today;
     return `<div class="duty"><span class="duty-num">${duty.number}번</span>
-      <span class="duty-state">${duty.carried ? '지난주에서 넘어옴' : '당번'}</span>
+      <span class="pill ${late ? 'miss' : 'duty-on'}">${late ? '아직 안 함' : '당번'}</span>
+      <span class="duty-state">${duty.carried ? '지난주에서 넘어옴' : ''}</span>
       <button class="done-btn" type="button" data-duty="${esc(duty.id)}" data-done="1">완료</button></div>`;
   }
 
