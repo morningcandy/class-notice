@@ -675,6 +675,12 @@
   </section>
 
   <section>
+    <div class="section-title">📅 예약링크</div>
+    <div class="section-sub">상담 시간을 예약할 수 있어요.</div>
+    <div class="link-list" id="bookingLinks"></div>
+  </section>
+
+  <section>
     <div class="section-title">🔗 학습링크</div>
     <div class="section-sub">공부에 쓰는 앱을 바로 열 수 있어요.</div>
     <div class="link-list" id="studyLinks"></div>
@@ -702,7 +708,7 @@
   <footer>매일 자동으로 마감 여부가 갱신됩니다</footer>
 </div>
 
-<script src="data.js?v=20260921-links2"></script>
+<script src="data.js?v=20261015-booking1"></script>
 <script src="config.js"></script>
 <script src="notice-logic.js?v=20260916-endsoon1"></script>
 <script src="notice-content.js?v=20260817-tt2"></script>
@@ -855,14 +861,19 @@ function renderClassTimetable(){
   }
 }
 
-/* 학사일정 달력 아래 학습링크. 목록은 data.js의 studyLinks에서 읽는다.
+/* 학사일정 달력 아래 예약링크·학습링크. 목록은 data.js의 bookingLinks·studyLinks에서 읽는다.
    외부 앱이라 새 탭으로 열고, 링크에서 이 사이트를 만지지 못하게 막는다. */
 function renderStudyLinks(){
-  const holder = document.getElementById('studyLinks');
+  renderLinkList('bookingLinks', typeof bookingLinks !== 'undefined' ? bookingLinks : [], '예약링크');
+  renderLinkList('studyLinks', typeof studyLinks !== 'undefined' ? studyLinks : [], '학습링크');
+}
+
+function renderLinkList(holderId, list, label){
+  const holder = document.getElementById(holderId);
   if(!holder) return;
-  const links = (typeof studyLinks !== 'undefined' && Array.isArray(studyLinks)) ? studyLinks : [];
+  const links = Array.isArray(list) ? list : [];
   if(!links.length){
-    holder.innerHTML = '<div class="empty-state">아직 등록된 학습링크가 없어요</div>';
+    holder.innerHTML = `<div class="empty-state">아직 등록된 ${label}가 없어요</div>`;
     return;
   }
   holder.innerHTML = links.map((link) => `

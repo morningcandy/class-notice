@@ -110,6 +110,23 @@ const examSchedules = [
   },
 ];
 
+/* 예약링크 — 학습링크 바로 위에 카드로 표시됩니다(상담 예약 등).
+   형식은 아래 studyLinks와 같습니다. */
+const bookingLinks = [
+  {
+    name: '학부모 상담 예약실',
+    desc: '보호자 상담 시간 예약하기',
+    url: 'https://sandam-app.vercel.app/',
+    emoji: '👪',
+  },
+  {
+    name: '학생 상담 예약실',
+    desc: '담임 선생님과 상담 시간 예약하기',
+    url: 'https://student-counsel.vercel.app/',
+    emoji: '💬',
+  },
+];
+
 /* 학습링크 — 학사일정 달력 아래에 카드로 표시됩니다.
    링크를 추가할 때는 아래 배열에 한 줄 더 넣기만 하면 됩니다.
    name: 카드 제목 / desc: 한 줄 설명 / url: 주소 / emoji: 앞 아이콘(생략 가능) */
