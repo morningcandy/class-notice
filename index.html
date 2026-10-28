@@ -362,7 +362,9 @@
   /* 오늘의 상담 일정(학급 시간표 위) — 학생 상담 앱 예약 중 오늘 것만 */
   #counselTodaySection .ct-intro{font-size:12px;color:var(--text-sub);margin:-4px 0 10px;}
   #counselTodaySection .ct-intro span{font-weight:700;color:var(--text);}
-  #counselToday ul{list-style:none;margin:0;padding:0;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff;}
+  #counselNextWrap{margin-top:14px;}
+  #counselNext ul{background:#f8f9fd;}
+  #counselToday ul,#counselNext ul{list-style:none;margin:0;padding:0;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff;}
   .ct-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px;}
   .ct-row:last-child{border-bottom:0;}
   .ct-time{display:flex;flex-direction:column;min-width:86px;font-weight:700;color:var(--text);line-height:1.2;}
@@ -661,9 +663,15 @@
   </section>
 
   <section id="counselTodaySection" style="display:none">
-    <div class="section-title">💬 오늘의 상담 일정</div>
-    <div class="ct-intro"><span id="counselTodayDate"></span> — 내 번호가 있으면 시간에 맞춰 상담실로 와 주세요.</div>
-    <div id="counselToday"></div>
+    <div class="section-title">💬 상담 일정</div>
+    <div id="counselTodayWrap" style="display:none">
+      <div class="ct-intro"><span id="counselTodayDate"></span> — 내 번호가 있으면 시간에 맞춰 상담실로 와 주세요.</div>
+      <div id="counselToday"></div>
+    </div>
+    <div id="counselNextWrap" style="display:none">
+      <div class="ct-intro"><span id="counselNextDate"></span> — 미리 확인하고 준비해 주세요.</div>
+      <div id="counselNext"></div>
+    </div>
   </section>
 
   <section id="timetableSection" style="display:none">
@@ -744,7 +752,7 @@
 <script src="call-feed.js?v=20260928-connect3"></script>
 <script src="board-panel.js?v=20260928-connect3"></script>
 <!-- 오늘의 상담 일정: 학생 상담 앱 예약 피드(번호·시간만) -->
-<script src="counsel-today.js?v=20261021-today1"></script>
+<script src="counsel-today.js?v=20261029-next1"></script>
 <script>
 let currentStudent = null;
 let calDate = new Date();
