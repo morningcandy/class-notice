@@ -11,6 +11,16 @@
   const REFRESH_MS = 5 * 60 * 1000;
   const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
+  // 피드를 못 읽을 때(2026-11 상담 앱 Blob 조회 한도 초과) 대신 보여 줄 확정 일정. 번호만.
+  // 날짜가 지나면 buildWeeks가 알아서 걸러내므로 지울 필요 없다.
+  const FALLBACK = [
+    ['2026-11-09', 1, 8], ['2026-11-10', 9, 12], ['2026-11-11', 15, 27],
+    ['2026-11-12', 18, 20], ['2026-11-13', 24, 30],
+  ].flatMap(([date, morning, lunch]) => [
+    { date, slot: '07:40-08:00', tag: '아침 조회 전', number: morning, status: 'reserved' },
+    { date, slot: '12:50-13:10', tag: '점심시간', number: lunch, status: 'reserved' },
+  ]);
+
   const pad = (n) => String(n).padStart(2, '0');
   const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
@@ -99,17 +109,19 @@
     const d = new Date();
     const today = ymd(d);
     const nowHm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    let items;
     try {
       const res = await fetch(FEED, { cache: 'no-store' });
       if (!res.ok) throw new Error(`상담 피드 응답 오류(${res.status})`);
-      const weeks = buildWeeks((await res.json()).items || [], today);
-      if (!weeks.length) { section.style.display = 'none'; return; }
-      calendar.innerHTML = weeks.map((week) => weekHtml(week, today, nowHm)).join('');
-      section.style.display = '';
+      items = (await res.json()).items || [];
     } catch (err) {
-      // 상담 앱이 잠시 안 열려도 알림장 나머지는 그대로 쓰도록 조용히 숨긴다.
-      section.style.display = 'none';
+      // 상담 앱이 안 열리면 확정 일정으로 대신 보여 준다. 그것도 지났으면 섹션을 숨긴다.
+      items = FALLBACK;
     }
+    const weeks = buildWeeks(items, today);
+    if (!weeks.length) { section.style.display = 'none'; return; }
+    calendar.innerHTML = weeks.map((week) => weekHtml(week, today, nowHm)).join('');
+    section.style.display = '';
   }
 
   refresh();
