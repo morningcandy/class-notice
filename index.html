@@ -391,22 +391,22 @@
   #classTimetable .notice-table th:first-child,#classTimetable .notice-table td:first-child{width:24px;color:var(--text-sub);}
   #classTimetable .notice-table td{color:var(--text);}
 
-  /* 고사 시간표(학급 시간표 위) — 날짜를 열로 두어 한눈에 */
+  /* 고사 시간표(학급 시간표 위) — 하루 한 줄 카드: 왼쪽 날짜, 오른쪽 교시별 과목 */
   #examSection .exam-intro{font-size:12px;color:var(--text-sub);margin:-4px 0 10px;}
-  .exam-table-wrap{border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#fff;}
-  .exam-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11.5px;}
-  .exam-table th,.exam-table td{padding:7px 3px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);text-align:center;word-break:keep-all;line-height:1.3;}
-  .exam-table th{background:var(--primary-light);color:var(--primary);font-weight:700;}
-  .exam-table th .wd{display:block;font-size:10px;font-weight:600;opacity:.75;}
-  .exam-table th:first-child,.exam-table td:first-child{width:50px;}
-  .exam-table th:last-child,.exam-table td:last-child{border-right:0;}
-  .exam-table tbody tr:last-child td{border-bottom:0;}
-  .exam-table td{color:var(--text);font-weight:600;}
-  .exam-table td.time{font-size:10px;color:var(--text-sub);font-weight:500;line-height:1.25;}
-  .exam-table td.time b{display:block;color:var(--text);font-size:11px;}
-  .exam-table td.none{color:#c3c6d4;font-weight:400;}
-  .exam-table th.today{background:var(--primary);color:#fff;}
-  .exam-table td.today{background:#fff8e1;}
+  .exam-times{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;}
+  .exam-times span{font-size:11px;color:var(--text-sub);background:var(--gray-bg);border-radius:999px;padding:3px 9px;}
+  .exam-times b{color:var(--primary);font-weight:700;margin-right:4px;}
+  .exam-days{display:flex;flex-direction:column;gap:8px;}
+  .exam-day{display:flex;align-items:stretch;gap:10px;padding:10px;border:1px solid var(--border);border-radius:12px;background:#fff;}
+  .exam-date{flex:0 0 52px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:9px;background:var(--primary-light);color:var(--primary);line-height:1.15;}
+  .exam-date b{font-size:15px;font-weight:800;}
+  .exam-date span{font-size:11px;font-weight:600;opacity:.8;}
+  .exam-subjects{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:5px;margin:0;padding:0;list-style:none;}
+  .exam-subjects li{display:flex;align-items:baseline;gap:8px;font-size:13.5px;font-weight:600;color:var(--text);word-break:keep-all;overflow-wrap:anywhere;line-height:1.35;}
+  .exam-subjects .p{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--text-sub);min-width:30px;}
+  .exam-day.today{border-color:var(--primary);box-shadow:0 0 0 2px rgba(67,97,238,.15);}
+  .exam-day.today .exam-date{background:var(--primary);color:#fff;}
+  .exam-day.past{opacity:.45;}
 
   /* 달력 */
   .calendar{
@@ -607,10 +607,12 @@
   .cc-table tbody th{font-size:14px;}
   .cc-table tbody th small{font-size:12px;}
   .cc-num{font-size:19px;}
-  .exam-table{font-size:15.5px;}
-  .exam-table th .wd{font-size:13px;}
-  .exam-table td.time{font-size:13px;}
-  .exam-table td.time b{font-size:14px;}
+  .exam-times span{font-size:13.5px;padding:4px 11px;}
+  .exam-date{flex-basis:64px;}
+  .exam-date b{font-size:18px;}
+  .exam-date span{font-size:13px;}
+  .exam-subjects li{font-size:16.5px;}
+  .exam-subjects .p{font-size:13px;min-width:38px;}
   #classTimetable .notice-table{font-size:14.5px;}
   #classTimetable .notice-text{font-size:15px;}
 
@@ -943,25 +945,24 @@ function renderExamSchedule(){
   const gi = CLASS_GRADE - 1;
   const WD = ['일','월','화','수','목','금','토'];
   const md = d => `${Number(d.slice(5,7))}월 ${Number(d.slice(8,10))}일(${WD[new Date(d+'T00:00:00').getDay()]})`;
-  const head = exam.days.map(d => {
-    const cls = d.date === today ? ' class="today"' : '';
-    return `<th${cls}>${Number(d.date.slice(5,7))}/${Number(d.date.slice(8,10))}<span class="wd">${WD[new Date(d.date+'T00:00:00').getDay()]}</span></th>`;
+  // 교시 시간은 맨 위에 한 번만 보여 주고, 날짜마다 2학년 과목만 교시와 함께 적는다.
+  const times = [];
+  exam.days.forEach(d => d.slots.forEach((slot, i) => {
+    if(!times[i] && slot.grades[gi]) times[i] = slot;
+  }));
+  const timeChips = times.map((slot, i) => slot
+    ? `<span><b>${i+1}교시</b>${escapeHtml(slot.start)}~${escapeHtml(slot.end)}</span>` : '').join('');
+  const days = exam.days.map(d => {
+    const items = d.slots.map((slot, i) => slot.grades[gi]
+      ? `<li><span class="p">${i+1}교시</span><span>${escapeHtml(slot.grades[gi])}</span></li>` : '').join('');
+    if(!items) return '';
+    const cls = d.date === today ? ' today' : (d.date < today ? ' past' : '');
+    const wd = WD[new Date(d.date+'T00:00:00').getDay()];
+    return `<div class="exam-day${cls}"><div class="exam-date"><b>${Number(d.date.slice(5,7))}/${Number(d.date.slice(8,10))}</b><span>${wd}</span></div><ul class="exam-subjects">${items}</ul></div>`;
   }).join('');
-  const rowCount = Math.max(...exam.days.map(d => d.slots.length));
-  const rows = [];
-  for(let i = 0; i < rowCount; i++){
-    const cells = exam.days.map(d => (d.slots[i] && d.slots[i].grades[gi]) || '');
-    if(cells.every(c => !c)) continue;
-    const ref = exam.days.find(d => d.slots[i]).slots[i];
-    const tds = cells.map((c, k) => {
-      const cls = [c ? '' : 'none', exam.days[k].date === today ? 'today' : ''].filter(Boolean).join(' ');
-      return `<td${cls ? ` class="${cls}"` : ''}>${c ? escapeHtml(c) : '·'}</td>`;
-    }).join('');
-    rows.push(`<tr><td class="time"><b>${i+1}교시</b>${escapeHtml(ref.start)}<br>${escapeHtml(ref.end)}</td>${tds}</tr>`);
-  }
   document.getElementById('examTitle').textContent = `📝 ${exam.title} 시간표`;
   document.getElementById('examIntro').textContent = `${md(exam.start)} ~ ${md(exam.end)} · ${CLASS_GRADE}학년`;
-  holder.innerHTML = `<div class="exam-table-wrap"><table class="exam-table"><thead><tr><th>시간</th>${head}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  holder.innerHTML = `<div class="exam-times">${timeChips}</div><div class="exam-days">${days}</div>`;
   section.style.display = 'block';
 }
 
