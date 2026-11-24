@@ -138,6 +138,19 @@ const examSchedules = [
   },
 ];
 
+/* 생기부 기재 링크 — 예약링크 바로 위에 따로 표시됩니다.
+   opensAt('yyyy-MM-ddTHH:mm', 한국시간) 전에는 안 보이고, closesAt(그날까지 포함)이 지나면 사라집니다. */
+const recordLinks = [
+  {
+    name: '자율·진로 활동 기입',
+    desc: '본인이 진행한 자율·진로 활동 적기 (12월 4일까지)',
+    url: 'https://docs.google.com/spreadsheets/d/1OAmFJy5sYGgDtju3KeJBlw3gKTdTk9L5/edit?usp=sharing',
+    emoji: '📝',
+    opensAt: '2026-11-26T08:00',
+    closesAt: '2026-12-04',
+  },
+];
+
 /* 예약링크 — 학습링크 바로 위에 카드로 표시됩니다(상담 예약 등).
    형식은 아래 studyLinks와 같습니다. */
 const bookingLinks = [

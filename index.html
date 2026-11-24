@@ -712,6 +712,12 @@
     </div>
   </section>
 
+  <section id="recordSection" style="display:none">
+    <div class="section-title">📝 생기부 기재 링크</div>
+    <div class="section-sub">정해진 기간에만 열려요. 기간 안에 꼭 기입하세요.</div>
+    <div class="link-list" id="recordLinks"></div>
+  </section>
+
   <section>
     <div class="section-title">📅 예약링크</div>
     <div class="section-sub">상담 시간을 예약할 수 있어요.</div>
@@ -746,7 +752,7 @@
   <footer>매일 자동으로 마감 여부가 갱신됩니다</footer>
 </div>
 
-<script src="data.js?v=20261123-final1"></script>
+<script src="data.js?v=20261124-record1"></script>
 <script src="config.js"></script>
 <script src="notice-logic.js?v=20260916-endsoon1"></script>
 <script src="notice-content.js?v=20260817-tt2"></script>
@@ -904,8 +910,24 @@ function renderClassTimetable(){
 /* 학사일정 달력 아래 예약링크·학습링크. 목록은 data.js의 bookingLinks·studyLinks에서 읽는다.
    외부 앱이라 새 탭으로 열고, 링크에서 이 사이트를 만지지 못하게 막는다. */
 function renderStudyLinks(){
+  renderRecordLinks();
   renderLinkList('bookingLinks', typeof bookingLinks !== 'undefined' ? bookingLinks : [], '예약링크');
   renderLinkList('studyLinks', typeof studyLinks !== 'undefined' ? studyLinks : [], '학습링크');
+}
+
+/* 생기부 기재 링크 — data.js의 recordLinks. opensAt(yyyy-MM-ddTHH:mm) 전과 closesAt(그날 포함)이 지나면 숨긴다. */
+function renderRecordLinks(){
+  const section = document.getElementById('recordSection');
+  if(!section) return;
+  const list = (typeof recordLinks !== 'undefined' && Array.isArray(recordLinks)) ? recordLinks : [];
+  const now = new Date();
+  const active = list.filter(link => {
+    if(link.opensAt && now < new Date(link.opensAt + ':00+09:00')) return false;
+    if(link.closesAt && now > new Date(link.closesAt + 'T23:59:59+09:00')) return false;
+    return true;
+  });
+  section.style.display = active.length ? 'block' : 'none';
+  if(active.length) renderLinkList('recordLinks', active, '생기부 기재 링크');
 }
 
 function renderLinkList(holderId, list, label){
