@@ -146,7 +146,7 @@ const recordLinks = [
     desc: '본인이 진행한 자율·진로 활동 적기 (12월 4일까지)',
     url: 'https://docs.google.com/spreadsheets/d/1OAmFJy5sYGgDtju3KeJBlw3gKTdTk9L5/edit?usp=sharing',
     emoji: '📝',
-    opensAt: '2026-11-26T08:00',
+    opensAt: '2026-11-27T08:00',
     closesAt: '2026-12-04',
   },
 ];
